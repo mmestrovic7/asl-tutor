@@ -1,0 +1,11 @@
+venv/
+training/venv/
+training/data/
+training/dynamic_data/
+training/*.csv
+training/*.h5
+asl_alphabet_dataset/
+asl_alphabet_test/
+asl-tutoring/
+.DS_Store
+.idea/
