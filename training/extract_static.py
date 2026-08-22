@@ -28,7 +28,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-from landmark_utils import normalize_landmarks
+from landmark_utils import normalize_landmarks, FEATURE_DIM
 
 STATIC_LETTERS = [c for c in "ABCDEFGHIKLMNOPQRSTUVWXY"]  # bez J i Z
 
@@ -50,7 +50,7 @@ def main():
     total, detected = 0, 0
     with open(args.out, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["label"] + [f"f{i}" for i in range(63)])
+        writer.writerow(["label"] + [f"f{i}" for i in range(FEATURE_DIM)])
 
         for letter in STATIC_LETTERS:
             folder = os.path.join(args.dataset, letter)

@@ -1,6 +1,6 @@
-import { createLandmarker, startCamera, drawSkeleton } from "./landmarker.js";
-import { normalizeLandmarks } from "./normalize.js";
-import { Recognizer, tryLoadModel } from "./recognizer.js";
+import { createLandmarker, startCamera, drawSkeleton } from "./landmarker.js?v=4";
+import { normalizeLandmarks } from "./normalize.js?v=4";
+import { Recognizer, tryLoadModel } from "./recognizer.js?v=4";
 
 console.log("app.js VERSION 3 loaded");
 

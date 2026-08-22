@@ -12,7 +12,7 @@
  *            šalje GRU modelu (J / Z / OTHER).
  */
 
-import { motionEnergy, resampleSequence } from "./normalize.js";
+import { motionEnergy, resampleSequence, FEATURE_DIM } from "./normalize.js?v=4";
 
 const CONF_STATIC   = 0.80;  // min. pouzdanost statičkog slova
 const CONF_DYNAMIC  = 0.75;  // min. pouzdanost J/Z
@@ -115,7 +115,7 @@ export class Recognizer {
 
   #predictStatic(vec) {
     return tf.tidy(() => {
-      const t = tf.tensor2d(vec, [1, 63]);
+      const t = tf.tensor2d(vec, [1, FEATURE_DIM]);
       const p = this.staticModel.predict(t).dataSync();
       let best = 0;
       for (let i = 1; i < p.length; i++) if (p[i] > p[best]) best = i;
@@ -126,10 +126,10 @@ export class Recognizer {
   #classifyDynamic() {
     if (!this.dynModel || this.seq.length < MIN_SEQ) return null;
     const rs = resampleSequence(this.seq, 30);
-    const flat = new Float32Array(30 * 63);
-    rs.forEach((f, i) => flat.set(f, i * 63));
+    const flat = new Float32Array(30 * FEATURE_DIM);
+    rs.forEach((f, i) => flat.set(f, i * FEATURE_DIM));
     const { label, prob } = tf.tidy(() => {
-      const t = tf.tensor3d(flat, [1, 30, 63]);
+      const t = tf.tensor3d(flat, [1, 30, FEATURE_DIM]);
       const p = this.dynModel.predict(t).dataSync();
       let best = 0;
       for (let i = 1; i < p.length; i++) if (p[i] > p[best]) best = i;

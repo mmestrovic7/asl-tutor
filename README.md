@@ -1,4 +1,4 @@
-# Slovka — sustav za prepoznavanje i učenje ASL ručne abecede
+# Sustav za prepoznavanje i učenje ASL ručne abecede
 
 Diplomski projekt: prepoznavanje statičkih **i dinamičkih** znakova američkog
 znakovnog jezika (ASL) u stvarnom vremenu, u web pregledniku.

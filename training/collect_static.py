@@ -25,7 +25,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-from landmark_utils import normalize_landmarks
+from landmark_utils import normalize_landmarks, FEATURE_DIM
 
 STATIC_LETTERS = set("ABCDEFGHIKLMNOPQRSTUVWXY")
 
@@ -48,7 +48,7 @@ def main():
 
     with open(args.out, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["label"] + [f"f{i}" for i in range(63)])
+        writer.writerow(["label"] + [f"f{i}" for i in range(FEATURE_DIM)])
 
         while True:
             ok, frame = cap.read()

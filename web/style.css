@@ -1,9 +1,3 @@
-/* ==================================================================
-   Slovka — svijetli, plavi vizualni identitet
-   Paleta:  pozadina #F2F7FD · površina #FFFFFF · tinta #102A43
-            primarna #1D6FE8 · rub #C9DEF6 · uspjeh #12946A
-   Tipografija: Sora (naslovi, slova) · Inter (tekst)
-   ================================================================== */
 
 :root {
   --bg: #F2F7FD;
@@ -47,7 +41,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .mode-card {
   text-align: left; cursor: pointer;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow);
+  border-radius: var(--radius); padding: 18px; /*box-shadow: var(--shadow);*/
   transition: transform .12s, border-color .12s;
 }
 .mode-card:hover { transform: translateY(-2px); border-color: var(--blue); }

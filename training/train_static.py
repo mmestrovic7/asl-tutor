@@ -31,7 +31,7 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
 
-from landmark_utils import mirror_vector, jitter
+from landmark_utils import mirror_vector, jitter, FEATURE_DIM
 
 STATIC_LETTERS = list("ABCDEFGHIKLMNOPQRSTUVWXY")  # 24 klase, redoslijed = indeksi klasa
 
@@ -40,7 +40,7 @@ def load_data(csv_paths):
     dfs = [pd.read_csv(p) for p in csv_paths]
     df = pd.concat(dfs, ignore_index=True)
     df = df[df["label"].isin(STATIC_LETTERS)]
-    X = df[[f"f{i}" for i in range(63)]].to_numpy(dtype=np.float32)
+    X = df[[f"f{i}" for i in range(FEATURE_DIM)]].to_numpy(dtype=np.float32)
     y = np.array([STATIC_LETTERS.index(l) for l in df["label"]], dtype=np.int64)
     return X, y
 
@@ -56,7 +56,7 @@ def augment(X, y):
 
 def build_mlp():
     model = keras.Sequential([
-        keras.layers.Input(shape=(63,)),
+        keras.layers.Input(shape=(FEATURE_DIM,)),
         keras.layers.Dense(128, activation="relu"),
         keras.layers.Dropout(0.3),
         keras.layers.Dense(64, activation="relu"),

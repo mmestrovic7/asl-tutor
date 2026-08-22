@@ -14,33 +14,73 @@ MediaPipe daje koordinate normalizirane na dimenzije slike (0..1).
 import numpy as np
 
 WRIST = 0          # zapešće
+THUMB_TIP = 4
+INDEX_MCP, INDEX_PIP = 5, 6
 MIDDLE_MCP = 9     # korijen srednjeg prsta (metacarpophalangeal zglob)
+MIDDLE_PIP = 10
+RING_MCP, RING_PIP = 13, 14
+PINKY_MCP = 17
+
+# Zglobovi čija udaljenost od vrha palca eksplicitno kodira POLOŽAJ PALCA —
+# glavni razlikovni detalj kod A/S/T (palac uz kažiprst / preko šake / između
+# kažiprsta i srednjaka) i M/N (palac ispod 3 ili 2 prsta). Sirove xyz
+# koordinate tu razliku nose posredno kroz 63 vrijednosti; ove udaljenosti je
+# čine izravnim, snažnim signalom modelu.
+THUMB_DIST_TARGETS = [INDEX_MCP, INDEX_PIP, MIDDLE_MCP, MIDDLE_PIP,
+                      RING_MCP, RING_PIP, PINKY_MCP]
+BASE_DIM = 63
+FEATURE_DIM = BASE_DIM + len(THUMB_DIST_TARGETS)  # 70
 
 
 def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
     """
     1. Translacija: zapešće u ishodište -> neovisnost o poziciji ruke u kadru.
-    2. Skaliranje: dijeljenje udaljenošću zapešće->korijen srednjeg prsta
+    2. Rotacija (u ravnini slike): zapešće->korijen srednjeg prsta poravna se
+       s referentnim smjerom (0, -1) -> neovisnost o naginjanju/rotaciji šake
+       u kadru (bez ovoga isti znak pod drugim kutom drukčije "izgleda" modelu,
+       što je osobito štetno za slova koja se razlikuju samo položajem palca
+       ili stupnjem savijenosti prstiju).
+    3. Skaliranje: dijeljenje udaljenošću zapešće->korijen srednjeg prsta
        -> neovisnost o udaljenosti ruke od kamere i veličini šake.
-    Vraća ravni vektor od 63 float vrijednosti.
+    4. Dodatne značajke: euklidske udaljenosti vrha palca do zglobova
+       kažiprsta/srednjaka/prstenjaka/malog prsta (vidi THUMB_DIST_TARGETS)
+       — eksplicitno kodiraju položaj palca.
+    Vraća ravni vektor od FEATURE_DIM (70) float vrijednosti.
     """
     pts = landmarks.astype(np.float32).copy()
     pts -= pts[WRIST]                       # translacija
+
+    mx, my = pts[MIDDLE_MCP][0], pts[MIDDLE_MCP][1]
+    r_xy = float(np.hypot(mx, my))
+    if r_xy > 1e-6:
+        cos_a, sin_a = -my / r_xy, mx / r_xy  # rotacija koja mx,my šalje na (0, -r_xy)
+        x, y = pts[:, 0].copy(), pts[:, 1].copy()
+        pts[:, 0] = cos_a * x + sin_a * y
+        pts[:, 1] = -sin_a * x + cos_a * y
+        # z ostaje netaknut — MediaPipeova z-koordinata je gruba procjena
+        # dubine i nije pouzdana osnova za rotaciju izvan ravnine slike.
+
     scale = np.linalg.norm(pts[MIDDLE_MCP]) # duljina "dlana"
     if scale < 1e-6:
         scale = 1.0
     pts /= scale                            # skaliranje
-    return pts.flatten()                    # (63,)
+
+    thumb = pts[THUMB_TIP]
+    extra = np.array([np.linalg.norm(thumb - pts[i]) for i in THUMB_DIST_TARGETS],
+                      dtype=np.float32)
+    return np.concatenate([pts.flatten(), extra])  # (70,)
 
 
-def mirror_vector(vec63: np.ndarray) -> np.ndarray:
+def mirror_vector(vec: np.ndarray) -> np.ndarray:
     """
     Zrcali normalizirani vektor po x-osi (x -> -x).
     Koristi se za augmentaciju: model tako nauči i lijevu i desnu ruku,
     pa u aplikaciji ne moramo uopće gledati MediaPipe 'handedness' oznaku.
+    Napomena: udaljenosti (indeksi 63+) su invarijantne na zrcaljenje pa se
+    ne diraju.
     """
-    out = vec63.copy()
-    out[0::3] *= -1.0   # svaka treća vrijednost je x koordinata
+    out = vec.copy()
+    out[0:BASE_DIM:3] *= -1.0   # svaka treća vrijednost je x koordinata
     return out
 
 

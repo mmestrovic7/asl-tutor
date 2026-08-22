@@ -12,10 +12,13 @@ OSTALO = sve što NIJE J ni Z: prijelazi između statičkih slova, nasumično
 
 Upute:
     python collect_dynamic.py --out dynamic_data
-    - tipka 'j' => počinje snimanje jedne sekvence za J (snima dok ima ruke
-      i dok se ruka kreće; završava ~0.5 s nakon što se pokret smiri)
-    - tipka 'z' => sekvenca za Z
-    - tipka 'o' => sekvenca za OSTALO
+    - tipka 'j' => počinje snimanje jedne sekvence za J; pritisni 'j' PONOVNO
+      da ODMAH završiš i spremiš (ručno označavanje kraja geste — precizni je
+      od automatskog čekanja na mirovanje). Ako ne pritisneš ništa, snimanje
+      se ipak automatski zatvara ~0.5 s nakon što se pokret smiri (fallback).
+    - tipka 'z' => sekvenca za Z (isto pravilo: 'z' ponovno = kraj)
+    - tipka 'o' => sekvenca za OSTALO (isto pravilo: 'o' ponovno = kraj)
+    - SPACE tijekom snimanja => odbaci trenutnu sekvencu bez spremanja
     - ESC izlaz
 
 Preporuka: 60–100 sekvenci za J, isto za Z, 150–200 za OSTALO.
@@ -33,7 +36,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-from landmark_utils import normalize_landmarks
+from landmark_utils import normalize_landmarks, BASE_DIM
 
 LABELS = {"j": "J", "z": "Z", "o": "OTHER"}
 MOTION_STOP_SECONDS = 0.5   # koliko mirovanja označava kraj geste
@@ -69,6 +72,14 @@ def main():
             np.save(os.path.join(args.out, recording, f"{recording}_{idx:04d}.npy"), arr)
             counts[recording] += 1
             print(f"Spremljeno {recording} #{idx} ({len(buffer)} frameova)")
+        elif recording:
+            print(f"Preskačem {recording}: premalo frameova ({len(buffer)} < {MIN_FRAMES})")
+        buffer = []
+        recording = None
+
+    def discard():
+        nonlocal buffer, recording
+        print(f"Odbačeno {recording} ({len(buffer)} frameova)")
         buffer = []
         recording = None
 
@@ -91,7 +102,8 @@ def main():
                 buffer.append(vec)
                 # energija pokreta = prosječni pomak u odnosu na prethodni frame
                 if last_vec is not None:
-                    energy = float(np.mean(np.abs(vec - last_vec)))
+                    # samo BASE_DIM (položaji) — vidi napomenu u normalize.js motionEnergy()
+                    energy = float(np.mean(np.abs(vec[:BASE_DIM] - last_vec[:BASE_DIM])))
                     if energy < MOTION_EPS:
                         if still_since is None:
                             still_since = time.time()
@@ -112,9 +124,14 @@ def main():
         if ch in LABELS and not recording:
             recording = LABELS[ch]
             buffer, last_vec, still_since = [], None, None
-            print(f"Snimam {recording}... izvedi gestu")
+            print(f"Snimam {recording}... izvedi gestu (ista tipka opet = kraj)")
+        elif ch in LABELS and recording == LABELS[ch]:
+            save()  # ručni kraj: ista tipka ponovno
+        elif key == 32 and recording:
+            discard()  # SPACE = odbaci
 
-        status = f"SNIMAM {recording} ({len(buffer)})" if recording else "j / z / o = snimi | ESC = izlaz"
+        status = (f"SNIMAM {recording} ({len(buffer)}) — ista tipka=kraj, SPACE=odbaci"
+                  if recording else "j / z / o = snimi | ESC = izlaz")
         color = (0, 0, 255) if recording else (30, 30, 30)
         cv2.putText(frame, status, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         cv2.putText(frame, f"J:{counts['J']}  Z:{counts['Z']}  OSTALO:{counts['OTHER']}",

@@ -27,7 +27,7 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
 
-from landmark_utils import resample_sequence, mirror_vector
+from landmark_utils import resample_sequence, mirror_vector, FEATURE_DIM
 
 LABELS = ["J", "Z", "OTHER"]   # redoslijed = indeksi klasa (čita ga i web app)
 SEQ_LEN = 30
@@ -71,7 +71,7 @@ def augment(X, y):
 
 def build_model():
     model = keras.Sequential([
-        keras.layers.Input(shape=(SEQ_LEN, 63)),
+        keras.layers.Input(shape=(SEQ_LEN, FEATURE_DIM)),
         keras.layers.GRU(64, return_sequences=False),
         keras.layers.Dropout(0.3),
         keras.layers.Dense(32, activation="relu"),
