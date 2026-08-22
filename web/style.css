@@ -41,7 +41,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .mode-card {
   text-align: left; cursor: pointer;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 18px; /*box-shadow: var(--shadow);*/
+  border-radius: var(--radius); padding: 18px;
   transition: transform .12s, border-color .12s;
 }
 .mode-card:hover { transform: translateY(-2px); border-color: var(--blue); }
@@ -104,7 +104,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .ref-desc { margin: 16px 0 4px; }
 .ref-hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
 .ref-dyn .ref-letter::after {
-  content: "pokret"; display: block; font-size: 12px; letter-spacing: .12em;
+  content: "motion"; display: block; font-size: 12px; letter-spacing: .12em;
   text-transform: uppercase; color: var(--muted); font-weight: 600; margin-top: 4px;
 }
 
@@ -145,6 +145,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 }
 .chip-see  { border-color: var(--blue); color: var(--blue); }
 .chip-move { border-color: var(--warn); color: var(--warn); }
+.chip-miss { border-color: var(--warn); color: var(--warn); }
 
 /* ---------- feedback uspjeha (prekriva kameru) ---------- */
 .success-overlay {

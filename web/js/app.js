@@ -1,8 +1,6 @@
-import { createLandmarker, startCamera, drawSkeleton } from "./landmarker.js?v=4";
-import { normalizeLandmarks } from "./normalize.js?v=4";
-import { Recognizer, tryLoadModel } from "./recognizer.js?v=4";
-
-console.log("app.js VERSION 3 loaded");
+import { createLandmarker, startCamera, drawSkeleton } from "./landmarker.js?v=12";
+import { normalizeLandmarks } from "./normalize.js?v=12";
+import { Recognizer, tryLoadModel } from "./recognizer.js?v=12";
 
 /* ------------------------------------------------------------------ */
 /* Data                                                              */
@@ -21,12 +19,12 @@ const DESCRIPTIONS = {
     G: "Hand turned sideways, index finger and thumb extended horizontally and parallel.",
     H: "Hand turned sideways, index and middle fingers extended horizontally and held together.",
     I: "Pinky finger extended upward, other fingers closed, thumb across them.",
-    J: "The I sign (pinky finger) drawing the curve of the letter J in the air — this is a movement!",
+    J: "The I sign (pinky finger) drawing the curve of the letter J in the air: this is a movement!",
     K: "Index and middle fingers extended upward in a V shape, thumb resting between them.",
-    L: "Index finger upright, thumb horizontal — the hand forms the letter L.",
+    L: "Index finger upright, thumb horizontal, forming the letter L.",
     M: "Thumb tucked underneath three bent fingers.",
     N: "Thumb tucked underneath two bent fingers.",
-    O: "All fingers and thumb curved into a circle — the shape of the letter O.",
+    O: "All fingers and thumb curved into a circle, forming the shape of the letter O.",
     P: "Like K, but with the hand pointing downward.",
     Q: "Like G (thumb and index finger), but pointing downward.",
     R: "Index and middle fingers extended and crossed.",
@@ -37,7 +35,7 @@ const DESCRIPTIONS = {
     W: "Index, middle, and ring fingers extended and spread apart.",
     X: "Index finger bent into a hook shape, the rest closed.",
     Y: "Thumb and pinky spread apart, the other three fingers closed.",
-    Z: "Draw the letter Z in the air with your extended index finger — this is a movement!",
+    Z: "Draw the letter Z in the air with your extended index finger: this is a movement!",
 };
 
 const SENTENCES = [
@@ -54,7 +52,7 @@ const app = {
     view: "home",
     landmarker: null,
     recognizer: null,
-    stream: null,             // Camera MediaStream — created once
+    stream: null,             // Camera MediaStream, created once
     demoMode: false,          // true when the models have not been trained yet
     lastVideoTime: -1,
     // LEARN
@@ -89,12 +87,13 @@ async function init() {
         staticModel: stat?.model, staticLabels: stat?.labels,
         dynModel: dyn?.model, dynLabels: dyn?.labels,
     });
+    window.__debugRecognizer = app.recognizer; // DEBUG (privremeno)
     app.landmarker = await createLandmarker();
     document.getElementById("loading")?.remove();
     render();
 }
 
-let camPanelEl = null; // persistent camera DOM node — created once
+let camPanelEl = null; // persistent camera DOM node, created once
 
 function cameraPanelHTML() {
     return `
@@ -144,7 +143,7 @@ async function ensureCamera() {
 }
 
 function loop() {
-    requestAnimationFrame(loop); // scheduled IMMEDIATELY — the loop cannot die
+    requestAnimationFrame(loop); // scheduled IMMEDIATELY, the loop cannot die
 
     const video = document.getElementById("cam");
     if (!video || !video.srcObject || video.readyState < 2) return;
@@ -162,7 +161,8 @@ function loop() {
         }
 
         const vec = lm ? normalizeLandmarks(lm) : null;
-        const state = app.recognizer.update(vec);
+        const rawWrist = lm ? { x: lm[0].x, y: lm[0].y } : null;
+        const state = app.recognizer.update(vec, rawWrist);
         handleFrame(state);
     } catch (e) {
         console.warn("Skipping frame due to error:", e);
@@ -181,15 +181,21 @@ function handleFrame(s) {
     else if (app.view === "show") handleShow(s, recognized);
 }
 
+let dynamicMissUntil = 0; // dok je u budućnosti, chip prikazuje poruku o neuspjelom J/Z pokušaju
+
 function updateHud(s) {
     const chip = document.getElementById("status-chip");
     const ring = document.getElementById("ring-fill");
     const ringLetter = document.getElementById("ring-letter");
     if (!chip) return;
 
-    if (!s.hand) { chip.textContent = "Show your hand to the camera"; chip.className = "chip"; }
+    if (s.dynamicMiss) dynamicMissUntil = Date.now() + 1500;
+
+    if (Date.now() < dynamicMissUntil) {
+        chip.textContent = "Didn't quite catch that, try again"; chip.className = "chip chip-miss";
+    } else if (!s.hand) { chip.textContent = "Show your hand to the camera"; chip.className = "chip"; }
     else if (s.state === "MOVING") { chip.textContent = "Tracking movement…"; chip.className = "chip chip-move"; }
-    else if (s.demo) { chip.textContent = "Demo mode — model not loaded"; chip.className = "chip"; }
+    else if (s.demo) { chip.textContent = "Demo mode: model not loaded"; chip.className = "chip"; }
     else if (s.letter) { chip.textContent = `I see: ${s.letter}`; chip.className = "chip chip-see"; }
     else { chip.textContent = "Hold the sign still"; chip.className = "chip"; }
 
@@ -210,7 +216,7 @@ function flashSuccess(letter, duration = 650) {
     if (letterEl) letterEl.textContent = letter || "";
 
     panel?.classList.remove("success");
-    void panel?.offsetWidth; // restart animacije
+    void panel?.offsetWidth; // restart the animation
     panel?.classList.add("success");
 
     overlay?.classList.add("show");
@@ -244,7 +250,7 @@ function handleWrite(s, rec) {
         flashSuccess(rec.letter);
         refreshWritten();
     }
-    // razmak: makni ruku iz kadra na ~1 s
+    // space: move your hand out of frame for ~1s
     if (!s.hand) {
         app.noHandFrames++;
         if (app.noHandFrames > 30 && app.written && !app.spaceInserted
@@ -294,7 +300,7 @@ function refreshSentence() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Render pogleda                                                      */
+/* Render views                                                        */
 /* ------------------------------------------------------------------ */
 
 const root = () => document.getElementById("view");
@@ -315,8 +321,8 @@ window.go = go;
 
 function demoBanner() {
     return app.demoMode
-        ? `<div class="banner">The models have not been trained yet — the app displays the hand skeleton,
-       but does not recognize signs. Run <code>train_static.py</code> i
+        ? `<div class="banner">The models have not been trained yet: the app displays the hand skeleton,
+       but does not recognize signs. Run <code>train_static.py</code> and
        <code>train_dynamic.py</code> then refresh the page.</div>`
         : "";
 }
@@ -336,7 +342,7 @@ function renderHome() {
     ${demoBanner()}
     <section class="hero">
       <h1>Learn the <span class="accent">ASL</span> alphabet</h1>
-      <p>The American Sign Language manual alphabet — one letter at a time,
+      <p>The American Sign Language manual alphabet, one letter at a time,
          with a camera and instant feedback.</p>
     </section>
     <section class="modes">
@@ -346,7 +352,7 @@ function renderHome() {
       </button>
       <button class="mode-card" onclick="app_startWrite()">
         <span class="mode-k">02</span><h3>Write freely</h3>
-        <p>Spell anything you want — recognized letters are added to the text.</p>
+        <p>Spell anything you want: recognized letters are added to the text.</p>
       </button>
       <button class="mode-card" onclick="app_startShow()">
         <span class="mode-k">03</span><h3>Show a sentence</h3>
@@ -386,8 +392,8 @@ function renderLearn() {
         <img class="ref-img" src="assets/signs/${L}.png" alt=""
              onerror="this.remove()">
         <p class="ref-desc">${DESCRIPTIONS[L]}</p>
-        ${dyn ? `<p class="ref-hint">Dinamički znak: izvedi movement u jednom
-                  motion, then hold your hand still.</p>`
+        ${dyn ? `<p class="ref-hint">Dynamic sign: perform the motion in one
+                  smooth movement, then hold your hand still.</p>`
         : `<p class="ref-hint">Hold the sign still until the ring fills up.</p>`}
       </div>
       <div id="camera-slot"></div>
