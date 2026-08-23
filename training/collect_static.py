@@ -13,12 +13,17 @@ Upute:
       (30 fps => ~150 uzoraka za 5 sekundi držanja)
     - ESC za izlaz
 
+Ako --out već postoji, novi uzorci se DODAJU na postojeće (ne briše ih),
+pa možeš pokretati skriptu više puta zaredom bez straha da ćeš izgubiti
+prijašnje snimke.
+
 CSV format identičan extract_static.py, pa se datoteke mogu jednostavno spojiti:
     python -c "import pandas as pd; pd.concat([pd.read_csv('static_landmarks.csv'), pd.read_csv('my_static.csv')]).to_csv('combined.csv', index=False)"
 """
 
 import argparse
 import csv
+import os
 import sys
 
 import cv2
@@ -46,9 +51,20 @@ def main():
     cap = cv2.VideoCapture(0)
     counts = {c: 0 for c in STATIC_LETTERS}
 
-    with open(args.out, "w", newline="") as f:
+    file_exists = os.path.isfile(args.out) and os.path.getsize(args.out) > 0
+    if file_exists:
+        with open(args.out, newline="") as f:
+            reader = csv.reader(f)
+            next(reader, None)  # header
+            for row in reader:
+                if row and row[0] in counts:
+                    counts[row[0]] += 1
+        print(f"Nastavljam na postojećem {args.out}: {sum(counts.values())} uzoraka već snimljeno")
+
+    with open(args.out, "a", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["label"] + [f"f{i}" for i in range(FEATURE_DIM)])
+        if not file_exists:
+            writer.writerow(["label"] + [f"f{i}" for i in range(FEATURE_DIM)])
 
         while True:
             ok, frame = cap.read()

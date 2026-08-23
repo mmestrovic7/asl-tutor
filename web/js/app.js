@@ -11,6 +11,7 @@ const DYNAMIC = new Set(["J", "Z"]);
 
 const SURVEY_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ5pAdlUFKtPFsbCRE5O8rNTtONRbo0DhcZSrz99Bsl8Q8aA/viewform";
 const SURVEY_ENTRY_LETTERS_CORRECT = "entry.1496988052"; // pitanje 3: "How many letters were you able to sign correctly?"
+const SURVEY_ENTRY_MISSING_LETTERS = "entry.209650739"; // pitanje: "Which letters were you unable to sign correctly?"
 const SURVEY_MIN = 3; // minimalni angažman prije nego anketa postane klikabilna
 const SURVEY_THRESHOLD = Math.ceil(ALPHABET.length * 0.75); // 20/26 - prag za proslavni popup
 
@@ -239,7 +240,6 @@ function handleLearn(s, rec) {
         flashSuccess(target, 1050);
         doneLetters.add(target);
         progress.save(doneLetters);
-        checkSurveyMinReached();
         checkSurveyUnlock();
         setTimeout(() => {
             advancing = false;
@@ -249,17 +249,7 @@ function handleLearn(s, rec) {
     }
 }
 
-/* ---- Survey notifications: eligibility (3 slova) i napredak (75%) ---- */
-function checkSurveyMinReached() {
-    if (doneLetters.size < SURVEY_MIN) return;
-    if (localStorage.getItem("asl-survey-min-notified")) return;
-    localStorage.setItem("asl-survey-min-notified", "1");
-    setTimeout(() => showSurveyModal({
-        title: "Survey unlocked",
-        body: "You can now fill out a short survey about your experience so far.",
-    }), 1300); // nakon success animacije
-}
-
+/* ---- Survey notifikacija: napredak (75%) ---- */
 function checkSurveyUnlock() {
     if (doneLetters.size < SURVEY_THRESHOLD) return;
     if (localStorage.getItem("asl-survey-notified")) return;
@@ -288,7 +278,11 @@ function showSurveyModal({ title, body }) {
 }
 window.app_openSurvey = () => {
     if (!SURVEY_URL) return;
-    const url = `${SURVEY_URL}?usp=pp_url&${SURVEY_ENTRY_LETTERS_CORRECT}=${doneLetters.size}`;
+    let url = `${SURVEY_URL}?usp=pp_url&${SURVEY_ENTRY_LETTERS_CORRECT}=${doneLetters.size}`;
+    if (SURVEY_ENTRY_MISSING_LETTERS) {
+        const missing = ALPHABET.filter((l) => !doneLetters.has(l)).join(", ");
+        url += `&${SURVEY_ENTRY_MISSING_LETTERS}=${encodeURIComponent(missing)}`;
+    }
     window.open(url, "_blank");
 };
 
