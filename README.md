@@ -25,7 +25,7 @@ Detektor pokreta (energija = prosječni pomak vektora između frameova)
                         gesta se klasificira kad pokret završi
 ```
 
-Sva inferencija (MediaPipe + TensorFlow.js) izvodi se **lokalno u browseru** —
+Sva inferencija (MediaPipe + TensorFlow.js) izvodi se **lokalno u browseru** -
 nema backenda, video nikad ne napušta računalo korisnika (bitan argument
 privatnosti za rad).
 
@@ -33,7 +33,7 @@ privatnosti za rad).
 
 ```
 asl-tutor/
-├── training/                  Python — priprema podataka i treniranje
+├── training/                  Python - priprema podataka i treniranje
 │   ├── requirements.txt
 │   ├── landmark_utils.py      normalizacija (ISTA logika kao web/js/normalize.js!)
 │   ├── extract_static.py      dataset slika → CSV landmarkova
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 Dvije opcije (najbolje obje, pa spojiti):
 
-**a) Javni dataset** — na Kaggleu potraži *"ASL Alphabet"* (autor grassknoted,
+**a) Javni dataset** - na Kaggleu potraži *"ASL Alphabet"* (autor grassknoted,
 ~87 000 slika, po ~3 000 na slovo). Raspakiraj pa:
 
 ```bash
@@ -121,7 +121,7 @@ ne prepoznaje) i to jasno kaže banerom.
 
 ### 6. (Opcionalno) Ilustracije znakova
 
-U `web/assets/signs/` stavi `A.png` … `Y.png` — prikazuju se na referentnoj
+U `web/assets/signs/` stavi `A.png` … `Y.png` - prikazuju se na referentnoj
 kartici. Ako slike nema, kartica prikazuje veliko slovo + tekstualni opis
 (opisi su ugrađeni u `app.js`). Pazi na licencu slika; postoje public-domain
 ASL grafikoni, a možeš ih i sama nacrtati.
@@ -132,7 +132,7 @@ ASL grafikoni, a možeš ih i sama nacrtati.
   točaka tako da je zapešće u ishodištu + dijeljenje udaljenošću
   zapešće→korijen srednjeg prsta. Model tako ne ovisi o poziciji ruke u kadru,
   udaljenosti od kamere ni veličini šake. *Funkcije moraju ostati identične u
-  oba jezika* — svaka nesimetrija tiho ruši točnost u produkciji.
+  oba jezika* - svaka nesimetrija tiho ruši točnost u produkciji.
 * **Zrcalna augmentacija** umjesto handedness logike: trening skup se udvostruči
   zrcalnim kopijama (x → −x), pa model radi za lijevu i desnu ruku, a aplikacija
   ne mora tumačiti MediaPipeovu oznaku ruke (koja se kod zrcaljene selfie
@@ -144,12 +144,12 @@ ASL grafikoni, a možeš ih i sama nacrtati.
   statičkog i dinamičkog puta.
 * **Prihvaćanje znaka**: pouzdanost ≥ 0.8 kroz 15 uzastopnih frameova +
   "cooldown" (isti znak se ne broji dvaput dok se ne promijeni ili ruka ne
-  makne) — sprječava slučajne pogotke tijekom prijelaza i duplo upisivanje.
+  makne) - sprječava slučajne pogotke tijekom prijelaza i duplo upisivanje.
 
 ## Poznata ograničenja (iskreno navesti u radu)
 
 * Slova **A, E, M, N, S, T** vizualno su vrlo slična (šaka, razlika je položaj
-  palca) — očekuj najviše zabuna upravo tu; pokaži matricom konfuzije.
+  palca) - očekuj najviše zabuna upravo tu; pokaži matricom konfuzije.
 * MediaPipe z-koordinata je gruba procjena dubine; znakovi koji se razlikuju
   rotacijom prema kameri (**G/Q, H/U, K/P**) osjetljivi su na kut snimanja.
 * Sustav uči *ručnu abecedu*, ne ASL kao jezik (ASL ima vlastitu gramatiku);
@@ -158,5 +158,5 @@ ASL grafikoni, a možeš ih i sama nacrtati.
 ## Verzije i kompatibilnost
 
 Python 3.10/3.11, `tensorflow==2.15` + `tensorflowjs==4.17` (usklađeni parovi
-— novije verzije TF-a koriste Keras 3 i lome konverter), `mediapipe==0.10.14`.
+- novije verzije TF-a koriste Keras 3 i lome konverter), `mediapipe==0.10.14`.
 U browseru: `@tensorflow/tfjs@4.20`, `@mediapipe/tasks-vision@0.10.14` (CDN).

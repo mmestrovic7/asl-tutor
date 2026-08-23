@@ -9,12 +9,12 @@ Očekivana struktura dataseta (npr. Kaggle "ASL Alphabet"):
         B/  ...
         ...
         Y/  ...
-(J i Z se preskaču — oni su dinamički i obrađuju se u collect_dynamic.py)
+(J i Z se preskaču - oni su dinamički i obrađuju se u collect_dynamic.py)
 
 Pokretanje:
     python extract_static.py --dataset putanja/do/dataseta --out static_landmarks.csv
 
-Izlaz: CSV s 64 stupca — 'label' + f0..f62 (normalizirani landmarkovi).
+Izlaz: CSV s 64 stupca - 'label' + f0..f62 (normalizirani landmarkovi).
 Napomena za rad: postotak slika na kojima MediaPipe NE detektira ruku
 (ispisuje se na kraju) zanimljiv je podatak za poglavlje o skupu podataka.
 """
@@ -55,7 +55,7 @@ def main():
         for letter in STATIC_LETTERS:
             folder = os.path.join(args.dataset, letter)
             if not os.path.isdir(folder):
-                print(f"[!] Preskačem {letter} — nema direktorija {folder}")
+                print(f"[!] Preskačem {letter} - nema direktorija {folder}")
                 continue
 
             files = sorted(os.listdir(folder))[: args.max_per_class]

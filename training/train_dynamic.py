@@ -11,7 +11,7 @@ Pokretanje:
     python train_dynamic.py --data dynamic_data
 
 Zašto GRU, a ne LSTM? GRU ima manje parametara, brže trenira, a na malim
-skupovima sekvenci tipično postiže jednake rezultate — dobar argument za rad
+skupovima sekvenci tipično postiže jednake rezultate - dobar argument za rad
 (može se navesti i eksperimentalna usporedba: samo zamijeni GRU s LSTM slojem).
 """
 
@@ -73,7 +73,7 @@ def build_model():
     model = keras.Sequential([
         keras.layers.Input(shape=(SEQ_LEN, FEATURE_DIM)),
         # reset_after=False: TF.js-ov GRU sloj ne podržava reset_after=True
-        # (Kerasov default od TF 2.x) — bez ovoga model.json učitavanje u
+        # (Kerasov default od TF 2.x) - bez ovoga model.json učitavanje u
         # browseru baci "GRUCell does not support reset_after parameter set
         # to true" i dynModel tiho ostane null (tryLoadModel guta grešku).
         keras.layers.GRU(64, return_sequences=False, reset_after=False),

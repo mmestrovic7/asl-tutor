@@ -79,7 +79,7 @@ def plot_confusion(cm, path):
         sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
                     xticklabels=STATIC_LETTERS, yticklabels=STATIC_LETTERS)
         plt.xlabel("Predviđeno"); plt.ylabel("Stvarno")
-        plt.title("Matrica konfuzije — statička slova")
+        plt.title("Matrica konfuzije - statička slova")
         plt.tight_layout(); plt.savefig(path, dpi=150)
         print(f"Matrica konfuzije: {path}")
     except Exception as e:

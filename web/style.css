@@ -37,7 +37,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .hero .accent { color: var(--blue); }
 .hero p { color: var(--muted); max-width: 52ch; margin: 0; }
 
-.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 26px 0 40px; }
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 26px 0 14px; }
 .mode-card {
   text-align: left; cursor: pointer;
   background: var(--surface); border: 1px solid var(--border);
@@ -82,6 +82,27 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .btn:hover { filter: brightness(1.07); }
 .btn.ghost { background: var(--surface); color: var(--blue); }
 .btn.ghost:hover { background: var(--blue-soft); }
+.btn:disabled, .btn.disabled {
+  cursor: not-allowed; filter: none; background: var(--border); border-color: var(--border);
+  color: var(--muted); opacity: .8;
+}
+.btn:disabled:hover, .btn.disabled:hover { filter: none; }
+
+.survey-card {
+  margin-top: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 24px;
+}
+.survey-card.unlocked { border-color: var(--blue); background: var(--blue-soft); }
+.survey-card h3 { margin: 0 0 4px; font-size: 16px; }
+.survey-card p { margin: 0; color: var(--muted); font-size: 13px; max-width: 46ch; }
+.survey-card .btn { white-space: nowrap; }
+
+.survey-modal { background: var(--surface); border-radius: var(--radius); padding: 28px;
+  max-width: 380px; text-align: center; }
+.survey-modal h3 { margin: 0 0 8px; font-size: 19px; }
+.survey-modal p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+.survey-modal-actions { display: flex; gap: 10px; justify-content: center; }
 
 .split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; align-items: start; }
 
@@ -100,7 +121,17 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
   padding: 26px; text-align: center;
 }
 .ref-letter { display: block; font-size: 96px; font-weight: 800; color: var(--blue); line-height: 1; }
-.ref-img { max-width: 78%; margin: 14px auto 0; display: block; border-radius: 12px; }
+.ref-img, .ref-vid { max-width: 78%; margin: 14px auto 0; display: block; border-radius: 12px; }
+.ref-toggle {
+  display: inline-flex; margin: 14px auto 0; padding: 3px; border-radius: 10px;
+  background: var(--blue-soft); gap: 2px;
+}
+.ref-tab {
+  border: none; background: transparent; padding: 6px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.ref-tab.active { background: var(--blue); color: #fff; }
+.ref-video-missing { color: var(--muted); font-size: 14px; margin-top: 14px; }
 .ref-desc { margin: 16px 0 4px; }
 .ref-hint { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
 .ref-dyn .ref-letter::after {
@@ -117,7 +148,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .camera-panel video, .camera-panel canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);        /* zrcalo — prirodni "selfie" prikaz */
+  transform: scaleX(-1);        /* zrcalo - prirodni "selfie" prikaz */
 }
 .camera-panel.success { animation: pulse-ok .9s ease; }
 @keyframes pulse-ok {
@@ -206,6 +237,14 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
   box-shadow: var(--shadow);
 }
 .modal-close:hover { background: var(--blue-soft); }
+.modal-download {
+  position: absolute; top: -14px; left: -14px; height: 32px; padding: 0 14px;
+  border-radius: 16px; border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink);
+  box-shadow: var(--shadow); text-decoration: none; display: inline-flex;
+  align-items: center; gap: 6px;
+}
+.modal-download:hover { background: var(--blue-soft); }
 
 /* ---------- responzivnost i pristupačnost ---------- */
 @media (max-width: 820px) {

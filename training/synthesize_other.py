@@ -5,22 +5,22 @@ Generira SINTETICKE sekvence za klasu OSTALO (dinamicki model J/Z/OSTALO) iz
 vec postojecih statickih landmarkova (static_landmarks.csv), bez potrebe za
 dodatnim snimanjem kamerom.
 
-Zasto ovo ima smisla: OSTALO treba pokriti "pokret ruke koji NIJE J ni Z" —
+Zasto ovo ima smisla: OSTALO treba pokriti "pokret ruke koji NIJE J ni Z" -
 najcesci takav pokret u stvarnoj upotrebi je PRIJELAZ ruke iz oblika jednog
 slova u oblik drugog slova (npr. iz A u B dok korisnik srice rijec). Takav
 prijelaz se moze aproksimirati linearnom interpolacijom izmedju dva stvarna,
-izmjerena staticka vektora — ista matematika kao resample_sequence() koja
+izmjerena staticka vektora - ista matematika kao resample_sequence() koja
 se ionako koristi za normalizaciju duljine pravih snimljenih gesti.
 
 Generira dvije vrste sekvenci:
-  - "prijelaz" — dva RAZLICITA nasumicno odabrana slova, interpolacija
+  - "prijelaz" - dva RAZLICITA nasumicno odabrana slova, interpolacija
     izmedju njihovih vektora kroz nasumican broj frameova + blagi sum
-  - "mirna_promjena" — jedno te isto slovo, ponovljeno uz izrazeniji sum —
+  - "mirna_promjena" - jedno te isto slovo, ponovljeno uz izrazeniji sum -
     simulira sitne korekcije/drhtanje ruke tijekom zadrzavanja pokreta
 
 NAPOMENA: Ovo NE zamjenjuje stvarno snimljene J/Z primjere niti barem
 tridesetak pravih OSTALO sekvenci snimljenih kamerom (idealno kombinirati
-oboje — vidi collect_dynamic.py) — ali brzo i besplatno popuni klasu do
+oboje - vidi collect_dynamic.py) - ali brzo i besplatno popuni klasu do
 potrebne kolicine i raznolikosti bez ijednog dodatnog snimanja.
 
 Pokretanje:

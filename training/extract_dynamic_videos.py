@@ -2,25 +2,25 @@
 extract_dynamic_videos.py
 --------------------------
 Pretvara dataset VIDEO isječaka dinamičkih slova (J, Z) u .npy sekvence
-kompatibilne s train_dynamic.py — analogno onome što extract_static.py radi
+kompatibilne s train_dynamic.py - analogno onome što extract_static.py radi
 za statička slova, samo za video umjesto slika.
 
 Očekivana struktura dataseta (npr. Kaggle "ASL Sign Language Alphabet
-Videos [J, Z]" — reorganiziraj datoteke u ovu strukturu ako dataset dolazi
+Videos [J, Z]" - reorganiziraj datoteke u ovu strukturu ako dataset dolazi
 drugačije posložen):
     dataset/
         J/  clip001.mp4, clip002.mp4, ...
         Z/  clip001.mp4, ...
 
 Svaki video tretiramo kao JEDNU gestu od početka do kraja klipa (bez
-detekcije pokreta — pretpostavka je da je klip već obrezan na samu gestu,
+detekcije pokreta - pretpostavka je da je klip već obrezan na samu gestu,
 što je uobičajeno za ovakve datasetove). Frameovi bez detektirane ruke se
 preskaču; klip s premalo detektiranih frameova se odbacuje.
 
 Pokretanje:
     python extract_dynamic_videos.py --dataset putanja/do/dataseta --out dynamic_data
 
-Sekvence se spremaju kao dynamic_data/<LABEL>/<LABEL>_kaggle_XXXX.npy —
+Sekvence se spremaju kao dynamic_data/<LABEL>/<LABEL>_kaggle_XXXX.npy -
 nastavlja brojanje od postojećih datoteka (isti konvencija kao
 collect_dynamic.py), pa se mogu bezbrižno spojiti s ručno snimljenim
 uzorcima. Nakon ovoga pokreni train_dynamic.py kao i inače.
@@ -75,7 +75,7 @@ def main():
     args = ap.parse_args()
 
     hands = mp.solutions.hands.Hands(
-        static_image_mode=False,   # video mod — koristi tracking između frameova
+        static_image_mode=False,   # video mod - koristi tracking između frameova
         max_num_hands=1,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
@@ -88,7 +88,7 @@ def main():
     for label in LABELS:
         folder = os.path.join(args.dataset, label)
         if not os.path.isdir(folder):
-            print(f"[!] Preskačem {label} — nema direktorija {folder}")
+            print(f"[!] Preskačem {label} - nema direktorija {folder}")
             continue
 
         out_dir = os.path.join(args.out, label)

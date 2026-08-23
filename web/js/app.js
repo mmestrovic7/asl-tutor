@@ -9,6 +9,11 @@ import { Recognizer, tryLoadModel } from "./recognizer.js?v=12";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const DYNAMIC = new Set(["J", "Z"]);
 
+const SURVEY_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ5pAdlUFKtPFsbCRE5O8rNTtONRbo0DhcZSrz99Bsl8Q8aA/viewform";
+const SURVEY_ENTRY_LETTERS_CORRECT = "entry.1496988052"; // pitanje 3: "How many letters were you able to sign correctly?"
+const SURVEY_MIN = 3; // minimalni angažman prije nego anketa postane klikabilna
+const SURVEY_THRESHOLD = Math.ceil(ALPHABET.length * 0.75); // 20/26 - prag za proslavni popup
+
 const DESCRIPTIONS = {
     A: "Closed fist, thumb upright alongside the index finger.",
     B: "Palm facing the camera, four fingers together and extended upward, thumb across the palm.",
@@ -234,12 +239,80 @@ function handleLearn(s, rec) {
         flashSuccess(target, 1050);
         doneLetters.add(target);
         progress.save(doneLetters);
+        checkSurveyMinReached();
+        checkSurveyUnlock();
         setTimeout(() => {
             advancing = false;
             if (app.learnIndex < ALPHABET.length - 1) app.learnIndex++;
             render();
         }, 1100);
     }
+}
+
+/* ---- Survey notifications: eligibility (3 slova) i napredak (75%) ---- */
+function checkSurveyMinReached() {
+    if (doneLetters.size < SURVEY_MIN) return;
+    if (localStorage.getItem("asl-survey-min-notified")) return;
+    localStorage.setItem("asl-survey-min-notified", "1");
+    setTimeout(() => showSurveyModal({
+        title: "Survey unlocked",
+        body: "You can now fill out a short survey about your experience so far.",
+    }), 1300); // nakon success animacije
+}
+
+function checkSurveyUnlock() {
+    if (doneLetters.size < SURVEY_THRESHOLD) return;
+    if (localStorage.getItem("asl-survey-notified")) return;
+    localStorage.setItem("asl-survey-notified", "1");
+    setTimeout(() => showSurveyModal({
+        title: `You've learned ${SURVEY_THRESHOLD}/${ALPHABET.length} letters`,
+        body: "You can now fill out a short survey about your experience.",
+    }), 1300);
+}
+
+function showSurveyModal({ title, body }) {
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay open";
+    modal.innerHTML = `
+      <div class="modal-box survey-modal">
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="Close">✕</button>
+        <h3>${title}</h3>
+        <p>${body}</p>
+        <div class="survey-modal-actions">
+          <button class="btn" onclick="app_openSurvey(); this.closest('.modal-overlay').remove()">Fill out survey</button>
+          <button class="btn ghost" onclick="this.closest('.modal-overlay').remove()">Maybe later</button>
+        </div>
+      </div>`;
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+}
+window.app_openSurvey = () => {
+    if (!SURVEY_URL) return;
+    const url = `${SURVEY_URL}?usp=pp_url&${SURVEY_ENTRY_LETTERS_CORRECT}=${doneLetters.size}`;
+    window.open(url, "_blank");
+};
+
+function surveySectionHTML() {
+    const n = doneLetters.size;
+    const milestone = n >= SURVEY_THRESHOLD;
+    const eligible = n >= SURVEY_MIN;
+    return `
+    <section class="survey-card ${eligible ? "unlocked" : ""}">
+      <div class="survey-text">
+        <h3>${milestone ? "Great progress, survey time!" : eligible ? "Survey unlocked" : "Survey"}</h3>
+        <p>${milestone
+            ? "You've learned most of the alphabet. Tell us about your experience."
+            : eligible
+                ? `Tell us about your experience any time but try to learn the whole
+                   alphabet first.`
+                : `Try at least ${SURVEY_MIN} letters first, then come back and tell us
+                   how it went (${n}/${SURVEY_MIN} so far).`}</p>
+      </div>
+      <button class="btn ${eligible ? "" : "disabled"}" ${eligible ? "" : "disabled"}
+              onclick="app_openSurvey()">
+        ${eligible ? "Fill out survey" : `${n}/${SURVEY_MIN}`}
+      </button>
+    </section>`;
 }
 
 /* ---- WRITE ---- */
@@ -359,10 +432,12 @@ function renderHome() {
         <p>We give you a sentence, and the letters light up as you sign them.</p>
       </button>
     </section>
+    ${surveySectionHTML()}
     <section>
       <h2 class="section-title">Letter map
         <span class="progress-note">${doneLetters.size}/26 learned</span></h2>
       <div class="letter-grid">${grid}</div>
+      <button class="btn ghost" style="margin-top:16px" onclick="app_showAlphabet()">See whole alphabet</button>
     </section>`;
 }
 window.app_openLetter = (i) => { app.learnIndex = i; go("learn"); };
@@ -370,6 +445,32 @@ window.app_startWrite = () => { app.written = ""; app.noHandFrames = 0; go("writ
 window.app_startShow = () => {
     app.sentence = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
     app.sentenceIndex = 0; go("show");
+};
+
+/* ---- Reference Image/Video toggle ---- */
+function refBlockHTML(letter) {
+    const mode = app.refMode || "image";
+    return `<div id="ref-media-wrap">
+      <div class="ref-toggle">
+        <button class="ref-tab ${mode === "image" ? "active" : ""}" onclick="app_setRefMode('image')">Image</button>
+        <button class="ref-tab ${mode === "video" ? "active" : ""}" onclick="app_setRefMode('video')">Video</button>
+      </div>
+      <div class="ref-media">
+        ${mode === "video"
+            ? `<video class="ref-vid" src="assets/signs/${letter}.mp4" autoplay loop muted playsinline
+                 onerror="app_refVideoMissing()"></video>`
+            : `<img class="ref-img" src="assets/signs/${letter}.png" alt="" onerror="this.remove()">`}
+      </div>
+    </div>`;
+}
+window.app_setRefMode = (mode) => {
+    app.refMode = mode;
+    const wrap = document.getElementById("ref-media-wrap");
+    if (wrap) wrap.outerHTML = refBlockHTML(ALPHABET[app.learnIndex]);
+};
+window.app_refVideoMissing = () => {
+    const media = document.querySelector("#ref-media-wrap .ref-media");
+    if (media) media.innerHTML = `<p class="ref-video-missing">Video coming soon for this letter.</p>`;
 };
 
 /* ---- LEARN ---- */
@@ -389,8 +490,7 @@ function renderLearn() {
     <div class="split">
       <div class="ref-card ${dyn ? "ref-dyn" : ""}">
         <span class="ref-letter">${L}</span>
-        <img class="ref-img" src="assets/signs/${L}.png" alt=""
-             onerror="this.remove()">
+        ${refBlockHTML(L)}
         <p class="ref-desc">${DESCRIPTIONS[L]}</p>
         ${dyn ? `<p class="ref-hint">Dynamic sign: perform the motion in one
                   smooth movement, then hold your hand still.</p>`
@@ -448,7 +548,7 @@ function renderShow() {
       <div class="write-card">
         <p class="write-label">Show in order:</p>
         <p id="sentence-box" class="sentence"></p>
-        <p id="sentence-done" class="done-note">Great job, the whole sentence! 🎉</p>
+        <p id="sentence-done" class="done-note">Great job, the whole sentence!</p>
       </div>
       <div id="camera-slot"></div>
     </div>`;
@@ -469,6 +569,7 @@ function showAlphabetModal() {
         modal.className = "modal-overlay";
         modal.innerHTML = `
       <div class="modal-box">
+        <a class="modal-download" href="assets/signs/alphabet.png" download="asl-alphabet.png">Download</a>
         <button class="modal-close" onclick="app_closeAlphabet()" aria-label="Close">✕</button>
         <img src="assets/signs/alphabet.png" alt="Cijela ASL abeceda" class="modal-img">
       </div>`;

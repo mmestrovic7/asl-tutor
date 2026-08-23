@@ -7,13 +7,13 @@ J = šaka u obliku slova I (ispružen mali prst) koja crta luk slova J.
 Z = ispružen kažiprst koji u zraku crta slovo Z.
 OSTALO = sve što NIJE J ni Z: prijelazi između statičkih slova, nasumično
          mahanje, podizanje/spuštanje ruke... Ova klasa sprječava da model
-         svaki pokret ruke proglasi J-om ili Z-om — snimi je BAREM koliko
+         svaki pokret ruke proglasi J-om ili Z-om - snimi je BAREM koliko
          i J i Z zajedno, što raznovrsnije.
 
 Upute:
     python collect_dynamic.py --out dynamic_data
     - tipka 'j' => počinje snimanje jedne sekvence za J; pritisni 'j' PONOVNO
-      da ODMAH završiš i spremiš (ručno označavanje kraja geste — precizni je
+      da ODMAH završiš i spremiš (ručno označavanje kraja geste - precizni je
       od automatskog čekanja na mirovanje). Ako ne pritisneš ništa, snimanje
       se ipak automatski zatvara ~0.5 s nakon što se pokret smiri (fallback).
     - tipka 'z' => sekvenca za Z (isto pravilo: 'z' ponovno = kraj)
@@ -23,7 +23,7 @@ Upute:
 
 Preporuka: 60–100 sekvenci za J, isto za Z, 150–200 za OSTALO.
 Snimaj s obje ruke, različitim brzinama i s malo različitih kutova.
-Sekvence se spremaju kao .npy datoteke oblika (T, 63) — resampliranje na
+Sekvence se spremaju kao .npy datoteke oblika (T, 63) - resampliranje na
 fiksnih 30 frameova radi se tek u train_dynamic.py.
 """
 
@@ -102,7 +102,7 @@ def main():
                 buffer.append(vec)
                 # energija pokreta = prosječni pomak u odnosu na prethodni frame
                 if last_vec is not None:
-                    # samo BASE_DIM (položaji) — vidi napomenu u normalize.js motionEnergy()
+                    # samo BASE_DIM (položaji) - vidi napomenu u normalize.js motionEnergy()
                     energy = float(np.mean(np.abs(vec[:BASE_DIM] - last_vec[:BASE_DIM])))
                     if energy < MOTION_EPS:
                         if still_since is None:
@@ -130,7 +130,7 @@ def main():
         elif key == 32 and recording:
             discard()  # SPACE = odbaci
 
-        status = (f"SNIMAM {recording} ({len(buffer)}) — ista tipka=kraj, SPACE=odbaci"
+        status = (f"SNIMAM {recording} ({len(buffer)}) - ista tipka=kraj, SPACE=odbaci"
                   if recording else "j / z / o = snimi | ESC = izlaz")
         color = (0, 0, 255) if recording else (30, 30, 30)
         cv2.putText(frame, status, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)

@@ -9,7 +9,7 @@ tvom osvjetljenju i tvojoj ruci bit će osjetno točniji u aplikaciji.
 Upute:
     python collect_static.py --out my_static.csv
     - pokaži znak u kameru
-    - drži tipku slova (npr. 'a') — svaki frame dok držiš postaje jedan uzorak
+    - drži tipku slova (npr. 'a') - svaki frame dok držiš postaje jedan uzorak
       (30 fps => ~150 uzoraka za 5 sekundi držanja)
     - ESC za izlaz
 
@@ -36,7 +36,7 @@ def main():
     args = ap.parse_args()
 
     hands = mp.solutions.hands.Hands(
-        static_image_mode=False,  # video mod — koristi tracking, brže i stabilnije
+        static_image_mode=False,  # video mod - koristi tracking, brže i stabilnije
         max_num_hands=1,
         min_detection_confidence=0.6,
         min_tracking_confidence=0.6,
