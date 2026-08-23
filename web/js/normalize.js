@@ -19,7 +19,11 @@ const PINKY_MCP = 17;
 const THUMB_DIST_TARGETS = [INDEX_MCP, INDEX_PIP, MIDDLE_MCP, MIDDLE_PIP,
                             RING_MCP, RING_PIP, PINKY_MCP];
 export const BASE_DIM = 63;
-export const FEATURE_DIM = BASE_DIM + THUMB_DIST_TARGETS.length; // 70
+// Zadnja 2 elementa vektora: (cos, sin) IZVORNOG kuta nagiba šake prije
+// ispravka rotacije — vidi napomenu u training/landmark_utils.py. G/Q, H/U,
+// K/P razlikuju se ISKLJUČIVO rotacijom cijele šake, pa ova dva broja vraćaju
+// signal koji bi inače rotacijski ispravak (korak 2. niže) izbrisao.
+export const FEATURE_DIM = BASE_DIM + THUMB_DIST_TARGETS.length + 2; // 72
 
 export function normalizeLandmarks(landmarks) {
   const base = new Float32Array(BASE_DIM);
@@ -37,8 +41,9 @@ export function normalizeLandmarks(landmarks) {
   // MORA biti identično rotaciji u training/landmark_utils.py.
   const mx0 = base[MIDDLE_MCP * 3], my0 = base[MIDDLE_MCP * 3 + 1];
   const rxy = Math.hypot(mx0, my0);
+  let cosA = 1.0, sinA = 0.0;
   if (rxy > 1e-6) {
-    const cosA = -my0 / rxy, sinA = mx0 / rxy;
+    cosA = -my0 / rxy; sinA = mx0 / rxy;
     for (let i = 0; i < 21; i++) {
       const x = base[i * 3], y = base[i * 3 + 1];
       base[i * 3]     = cosA * x + sinA * y;
@@ -61,6 +66,9 @@ export function normalizeLandmarks(landmarks) {
     const dx = tx - base[idx * 3], dy = ty - base[idx * 3 + 1], dz = tz - base[idx * 3 + 2];
     out[BASE_DIM + k] = Math.hypot(dx, dy, dz);
   });
+  // 5) (cos, sin) izvornog kuta nagiba šake
+  out[BASE_DIM + THUMB_DIST_TARGETS.length] = cosA;
+  out[BASE_DIM + THUMB_DIST_TARGETS.length + 1] = sinA;
   return out;
 }
 

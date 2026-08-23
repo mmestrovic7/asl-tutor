@@ -72,7 +72,11 @@ def augment(X, y):
 def build_model():
     model = keras.Sequential([
         keras.layers.Input(shape=(SEQ_LEN, FEATURE_DIM)),
-        keras.layers.GRU(64, return_sequences=False),
+        # reset_after=False: TF.js-ov GRU sloj ne podržava reset_after=True
+        # (Kerasov default od TF 2.x) — bez ovoga model.json učitavanje u
+        # browseru baci "GRUCell does not support reset_after parameter set
+        # to true" i dynModel tiho ostane null (tryLoadModel guta grešku).
+        keras.layers.GRU(64, return_sequences=False, reset_after=False),
         keras.layers.Dropout(0.3),
         keras.layers.Dense(32, activation="relu"),
         keras.layers.Dense(len(LABELS), activation="softmax"),

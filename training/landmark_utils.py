@@ -29,7 +29,12 @@ PINKY_MCP = 17
 THUMB_DIST_TARGETS = [INDEX_MCP, INDEX_PIP, MIDDLE_MCP, MIDDLE_PIP,
                       RING_MCP, RING_PIP, PINKY_MCP]
 BASE_DIM = 63
-FEATURE_DIM = BASE_DIM + len(THUMB_DIST_TARGETS)  # 70
+# Zadnja 2 elementa vektora: (cos, sin) IZVORNOG kuta nagiba šake prije
+# ispravka rotacije (vidi niže) — G/Q, H/U, K/P razlikuju se ISKLJUČIVO
+# rotacijom cijele šake, pa rotacijski ispravak koji čini ostatak vektora
+# rotacijski-invarijantnim upravo TU informaciju briše. Ova dva broja je
+# vraćaju natrag, eksplicitno, bez da kvare invarijantnost ostatka vektora.
+FEATURE_DIM = BASE_DIM + len(THUMB_DIST_TARGETS) + 2  # 72
 
 
 def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
@@ -45,7 +50,10 @@ def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
     4. Dodatne značajke: euklidske udaljenosti vrha palca do zglobova
        kažiprsta/srednjaka/prstenjaka/malog prsta (vidi THUMB_DIST_TARGETS)
        — eksplicitno kodiraju položaj palca.
-    Vraća ravni vektor od FEATURE_DIM (70) float vrijednosti.
+    5. (cos, sin) izvornog kuta nagiba šake — vraća signal koji je korak 2.
+       namjerno uklonio iz ostatka vektora, za slova koja se razlikuju
+       ROTACIJOM cijele šake (G/Q, H/U, K/P), a ne oblikom prstiju.
+    Vraća ravni vektor od FEATURE_DIM (72) float vrijednosti.
     """
     pts = landmarks.astype(np.float32).copy()
     pts -= pts[WRIST]                       # translacija
@@ -59,6 +67,8 @@ def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
         pts[:, 1] = -sin_a * x + cos_a * y
         # z ostaje netaknut — MediaPipeova z-koordinata je gruba procjena
         # dubine i nije pouzdana osnova za rotaciju izvan ravnine slike.
+    else:
+        cos_a, sin_a = 1.0, 0.0
 
     scale = np.linalg.norm(pts[MIDDLE_MCP]) # duljina "dlana"
     if scale < 1e-6:
@@ -68,7 +78,8 @@ def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
     thumb = pts[THUMB_TIP]
     extra = np.array([np.linalg.norm(thumb - pts[i]) for i in THUMB_DIST_TARGETS],
                       dtype=np.float32)
-    return np.concatenate([pts.flatten(), extra])  # (70,)
+    rot = np.array([cos_a, sin_a], dtype=np.float32)
+    return np.concatenate([pts.flatten(), extra, rot])  # (72,)
 
 
 def mirror_vector(vec: np.ndarray) -> np.ndarray:
@@ -76,11 +87,15 @@ def mirror_vector(vec: np.ndarray) -> np.ndarray:
     Zrcali normalizirani vektor po x-osi (x -> -x).
     Koristi se za augmentaciju: model tako nauči i lijevu i desnu ruku,
     pa u aplikaciji ne moramo uopće gledati MediaPipe 'handedness' oznaku.
-    Napomena: udaljenosti (indeksi 63+) su invarijantne na zrcaljenje pa se
-    ne diraju.
+    Napomena: udaljenosti (indeksi 63..69) su invarijantne na zrcaljenje pa se
+    ne diraju. Zadnja dva elementa (cos, sin) JESU osjetljiva na zrcaljenje:
+    zrcaljenje po x-osi drži cos isti, a mijenja predznak sin (kut se reflektira
+    oko okomite osi).
     """
     out = vec.copy()
     out[0:BASE_DIM:3] *= -1.0   # svaka treća vrijednost je x koordinata
+    if out.shape[0] >= 2:
+        out[-1] *= -1.0         # sin komponenta kuta nagiba
     return out
 
 
