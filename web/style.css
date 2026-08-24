@@ -104,7 +104,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .survey-modal p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
 .survey-modal-actions { display: flex; gap: 10px; justify-content: center; }
 
-.split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; align-items: start; }
+.split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; align-items: stretch; }
 
 .banner {
   background: var(--blue-soft); border: 1px solid var(--border);
@@ -119,6 +119,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 26px; text-align: center;
+  display: flex; flex-direction: column; justify-content: center;
 }
 .ref-letter { display: block; font-size: 96px; font-weight: 800; color: var(--blue); line-height: 1; }
 .ref-img, .ref-vid { max-width: 78%; margin: 14px auto 0; display: block; border-radius: 12px; }
@@ -143,7 +144,7 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 .camera-panel {
   position: relative; border-radius: var(--radius); overflow: hidden;
   border: 1.5px solid var(--border); background: #0B1B2C;
-  box-shadow: var(--shadow); aspect-ratio: 4 / 3;
+  box-shadow: var(--shadow); height: 100%; min-height: 320px;
 }
 .camera-panel video, .camera-panel canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -250,6 +251,22 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
 @media (max-width: 820px) {
   .split { grid-template-columns: 1fr; }
   .modes { grid-template-columns: 1fr; }
+  .camera-panel { height: auto; aspect-ratio: 4 / 3; }
+}
+@media (max-width: 640px) {
+  main { padding-top: 64px; }
+  .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toolbar .crumb { grid-column: 1 / -1; text-align: center; order: -1; margin-bottom: 2px; }
+  .toolbar .spacer { display: none; }
+  .toolbar .btn { padding: 8px 14px; font-size: 13px; width: 100%; }
+  .survey-card { flex-direction: column; align-items: stretch; text-align: center; }
+  .survey-card .btn { width: 100%; }
+  .ref-card { height: auto; overflow-y: visible; padding: 16px; }
+  .ref-letter { font-size: 48px; padding: 24px 0; }
+  .ref-img, .ref-vid { max-width: 40%; margin-top: 8px; }
+  .ref-desc { font-size: 14px; margin: 6px 0 2px; }
+  .ref-hint { font-size: 12px; margin: 2px 0 0; }
+  .camera-panel { height: 380px; min-height: 0; aspect-ratio: auto; }
 }
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {

@@ -570,7 +570,7 @@ function showAlphabetModal() {
         modal.addEventListener("click", (e) => { if (e.target === modal) closeAlphabetModal(); });
         document.body.appendChild(modal);
         document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") closeAlphabetModal();
+            if (e.key === "Escape") closeAlphabetModal()
         });
     }
     modal.classList.add("open");
