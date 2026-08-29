@@ -9,6 +9,11 @@ import { Recognizer, tryLoadModel } from "./recognizer.js?v=12";
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const DYNAMIC = new Set(["J", "Z"]);
 
+// Bump this whenever a file under assets/signs/ is replaced: <video>/<img> src
+// has no other cache-busting, so browsers that fetched a stale/missing asset
+// (e.g. when only A.mp4 existed) would otherwise keep serving that failure.
+const SIGN_ASSET_VERSION = 2;
+
 const SURVEY_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ5pAdlUFKtPFsbCRE5O8rNTtONRbo0DhcZSrz99Bsl8Q8aA/viewform";
 const SURVEY_ENTRY_LETTERS_CORRECT = "entry.1496988052"; // question 3: "How many letters were you able to sign correctly?"
 const SURVEY_ENTRY_MISSING_LETTERS = "entry.209650739"; // question: "Which letters were you unable to sign correctly?"
@@ -490,9 +495,9 @@ function refBlockHTML(letter) {
       </div>
       <div class="ref-media">
         ${mode === "video"
-            ? `<video class="ref-vid" src="assets/signs/${letter}.mp4" autoplay loop muted playsinline
+            ? `<video class="ref-vid" src="assets/signs/${letter}.mp4?v=${SIGN_ASSET_VERSION}" autoplay loop muted playsinline
                  onerror="app_refVideoMissing()"></video>`
-            : `<img class="ref-img" src="assets/signs/${letter}.png" alt="" onerror="this.remove()">`}
+            : `<img class="ref-img" src="assets/signs/${letter}.png?v=${SIGN_ASSET_VERSION}" alt="" onerror="this.remove()">`}
       </div>
     </div>`;
 }
