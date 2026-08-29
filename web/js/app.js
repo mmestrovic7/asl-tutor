@@ -276,7 +276,8 @@ function showEndOfAlphabet() {
            Run through it again, or go back to the letter map and pick the ones
            you want to practise.</p>
         <div class="survey-modal-actions">
-          <button class="btn" onclick="app_restartLearn()">Start again from A</button>
+          <button class="btn" onclick="app_openSurvey(); app_closeEnd()">Fill out survey</button>
+          <button class="btn ghost" onclick="app_restartLearn()">Start again from A</button>
           <button class="btn ghost" onclick="app_closeEnd(); go('home')">Letter map</button>
         </div>
       </div>`;

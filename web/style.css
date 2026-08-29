@@ -113,7 +113,8 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
   letter-spacing: .04em; line-height: 1; margin-bottom: 14px;
 }
 .end-modal h3 { max-width: 16ch; }
-.end-modal .survey-modal-actions { flex-wrap: wrap; width: 100%; }
+.end-modal .survey-modal-actions { flex-direction: column; width: 100%; }
+.end-modal .survey-modal-actions .btn { width: 100%; }
 
 .split { display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; align-items: stretch; }
 
