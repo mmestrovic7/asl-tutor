@@ -274,6 +274,8 @@ main { max-width: 1060px; margin: 0 auto; padding: 128px 64px 64px; }
   .ref-card { height: auto; overflow-y: visible; padding: 16px; }
   .ref-letter { font-size: 48px; padding: 24px 0; }
   .ref-img, .ref-vid { max-width: 40%; margin-top: 8px; }
+  .ref-toggle { padding: 4px; }
+  .ref-tab { padding: 11px 22px; font-size: 15px; min-height: 44px; }
   .ref-desc { font-size: 14px; margin: 6px 0 2px; }
   .ref-hint { font-size: 12px; margin: 2px 0 0; }
   .camera-panel { height: 380px; min-height: 0; aspect-ratio: auto; }
