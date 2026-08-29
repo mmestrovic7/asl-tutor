@@ -1,30 +1,30 @@
 """
 collect_dynamic.py
 ------------------
-Snimanje SEKVENCI za dinamičke znakove J i Z (+ klasa OSTALO).
+Recording SEQUENCES for the dynamic signs J and Z (+ the OTHER class).
 
-J = šaka u obliku slova I (ispružen mali prst) koja crta luk slova J.
-Z = ispružen kažiprst koji u zraku crta slovo Z.
-OSTALO = sve što NIJE J ni Z: prijelazi između statičkih slova, nasumično
-         mahanje, podizanje/spuštanje ruke... Ova klasa sprječava da model
-         svaki pokret ruke proglasi J-om ili Z-om - snimi je BAREM koliko
-         i J i Z zajedno, što raznovrsnije.
+J = hand shaped like the letter I (extended pinky) drawing the arc of the letter J.
+Z = extended index finger drawing the letter Z in the air.
+OTHER = everything that is NOT J or Z: transitions between static letters, random
+        waving, raising/lowering the hand... This class prevents the model from
+        labeling every hand movement as J or Z - record it for AT LEAST as much
+        as J and Z combined, as varied as possible.
 
-Upute:
+Instructions:
     python collect_dynamic.py --out dynamic_data
-    - tipka 'j' => počinje snimanje jedne sekvence za J; pritisni 'j' PONOVNO
-      da ODMAH završiš i spremiš (ručno označavanje kraja geste - precizni je
-      od automatskog čekanja na mirovanje). Ako ne pritisneš ništa, snimanje
-      se ipak automatski zatvara ~0.5 s nakon što se pokret smiri (fallback).
-    - tipka 'z' => sekvenca za Z (isto pravilo: 'z' ponovno = kraj)
-    - tipka 'o' => sekvenca za OSTALO (isto pravilo: 'o' ponovno = kraj)
-    - SPACE tijekom snimanja => odbaci trenutnu sekvencu bez spremanja
-    - ESC izlaz
+    - key 'j' => starts recording one sequence for J; press 'j' AGAIN
+      to immediately finish and save it (manually marking the end of the gesture is
+      more precise than automatically waiting for stillness). If you don't press anything,
+      the recording still closes automatically ~0.5 s after the movement settles (fallback).
+    - key 'z' => sequence for Z (same rule: pressing 'z' again = end)
+    - key 'o' => sequence for OTHER (same rule: pressing 'o' again = end)
+    - SPACE during recording => discard the current sequence without saving
+    - ESC to exit
 
-Preporuka: 60–100 sekvenci za J, isto za Z, 150–200 za OSTALO.
-Snimaj s obje ruke, različitim brzinama i s malo različitih kutova.
-Sekvence se spremaju kao .npy datoteke oblika (T, 63) - resampliranje na
-fiksnih 30 frameova radi se tek u train_dynamic.py.
+Recommendation: 60-100 sequences for J, the same for Z, 150-200 for OTHER.
+Record with both hands, at different speeds and from slightly different angles.
+Sequences are saved as .npy files of shape (T, 63) - resampling to a
+fixed 30 frames is done only in train_dynamic.py.
 """
 
 import argparse
@@ -39,8 +39,8 @@ import numpy as np
 from landmark_utils import normalize_landmarks, BASE_DIM
 
 LABELS = {"j": "J", "z": "Z", "o": "OTHER"}
-MOTION_STOP_SECONDS = 0.5   # koliko mirovanja označava kraj geste
-MOTION_EPS = 0.03           # prag energije pokreta (prosjecni pomak vektora)
+MOTION_STOP_SECONDS = 0.5   # how much stillness marks the end of a gesture
+MOTION_EPS = 0.03           # motion energy threshold (average vector displacement)
 MIN_FRAMES = 8
 MAX_FRAMES = 90
 
@@ -58,8 +58,8 @@ def main():
     drawer = mp.solutions.drawing_utils
 
     cap = cv2.VideoCapture(0)
-    recording = None      # None ili naziv klase
-    buffer = []           # lista 63-dim vektora
+    recording = None      # None or the class name
+    buffer = []           # list of 63-dim vectors
     last_vec = None
     still_since = None
     counts = {lab: len(os.listdir(os.path.join(args.out, lab))) for lab in LABELS.values()}
@@ -71,15 +71,15 @@ def main():
             idx = counts[recording]
             np.save(os.path.join(args.out, recording, f"{recording}_{idx:04d}.npy"), arr)
             counts[recording] += 1
-            print(f"Spremljeno {recording} #{idx} ({len(buffer)} frameova)")
+            print(f"Saved {recording} #{idx} ({len(buffer)} frames)")
         elif recording:
-            print(f"Preskačem {recording}: premalo frameova ({len(buffer)} < {MIN_FRAMES})")
+            print(f"Skipping {recording}: too few frames ({len(buffer)} < {MIN_FRAMES})")
         buffer = []
         recording = None
 
     def discard():
         nonlocal buffer, recording
-        print(f"Odbačeno {recording} ({len(buffer)} frameova)")
+        print(f"Discarded {recording} ({len(buffer)} frames)")
         buffer = []
         recording = None
 
@@ -100,9 +100,9 @@ def main():
         if recording:
             if vec is not None:
                 buffer.append(vec)
-                # energija pokreta = prosječni pomak u odnosu na prethodni frame
+                # motion energy = average displacement relative to the previous frame
                 if last_vec is not None:
-                    # samo BASE_DIM (položaji) - vidi napomenu u normalize.js motionEnergy()
+                    # only BASE_DIM (positions) - see note in normalize.js motionEnergy()
                     energy = float(np.mean(np.abs(vec[:BASE_DIM] - last_vec[:BASE_DIM])))
                     if energy < MOTION_EPS:
                         if still_since is None:
@@ -115,7 +115,7 @@ def main():
                 if len(buffer) >= MAX_FRAMES:
                     save()
             else:
-                save()  # ruka nestala iz kadra => kraj sekvence
+                save()  # hand disappeared from frame => end of sequence
 
         key = cv2.waitKey(1) & 0xFF
         if key == 27:
@@ -124,19 +124,19 @@ def main():
         if ch in LABELS and not recording:
             recording = LABELS[ch]
             buffer, last_vec, still_since = [], None, None
-            print(f"Snimam {recording}... izvedi gestu (ista tipka opet = kraj)")
+            print(f"Recording {recording}... perform the gesture (same key again = end)")
         elif ch in LABELS and recording == LABELS[ch]:
-            save()  # ručni kraj: ista tipka ponovno
+            save()  # manual end: same key again
         elif key == 32 and recording:
-            discard()  # SPACE = odbaci
+            discard()  # SPACE = discard
 
-        status = (f"SNIMAM {recording} ({len(buffer)}) - ista tipka=kraj, SPACE=odbaci"
-                  if recording else "j / z / o = snimi | ESC = izlaz")
+        status = (f"RECORDING {recording} ({len(buffer)}) - same key=end, SPACE=discard"
+                  if recording else "j / z / o = record | ESC = exit")
         color = (0, 0, 255) if recording else (30, 30, 30)
         cv2.putText(frame, status, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        cv2.putText(frame, f"J:{counts['J']}  Z:{counts['Z']}  OSTALO:{counts['OTHER']}",
+        cv2.putText(frame, f"J:{counts['J']}  Z:{counts['Z']}  OTHER:{counts['OTHER']}",
                     (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 100, 220), 2)
-        cv2.imshow("Prikupljanje dinamickih znakova", frame)
+        cv2.imshow("Collecting dynamic signs", frame)
 
     cap.release()
     cv2.destroyAllWindows()

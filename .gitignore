@@ -9,3 +9,6 @@ asl_alphabet_test/
 asl-tutoring/
 .DS_Store
 .idea/
+# thesis (kept out of this repo)
+thesis/
+training/explore/

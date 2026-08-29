@@ -10,10 +10,10 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const DYNAMIC = new Set(["J", "Z"]);
 
 const SURVEY_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeZ5pAdlUFKtPFsbCRE5O8rNTtONRbo0DhcZSrz99Bsl8Q8aA/viewform";
-const SURVEY_ENTRY_LETTERS_CORRECT = "entry.1496988052"; // pitanje 3: "How many letters were you able to sign correctly?"
-const SURVEY_ENTRY_MISSING_LETTERS = "entry.209650739"; // pitanje: "Which letters were you unable to sign correctly?"
-const SURVEY_MIN = 3; // minimalni angažman prije nego anketa postane klikabilna
-const SURVEY_THRESHOLD = Math.ceil(ALPHABET.length * 0.75); // 20/26 - prag za proslavni popup
+const SURVEY_ENTRY_LETTERS_CORRECT = "entry.1496988052"; // question 3: "How many letters were you able to sign correctly?"
+const SURVEY_ENTRY_MISSING_LETTERS = "entry.209650739"; // question: "Which letters were you unable to sign correctly?"
+const SURVEY_MIN = 3; // minimum engagement before the survey becomes clickable
+const SURVEY_THRESHOLD = Math.ceil(ALPHABET.length * 0.75); // 20/26 - threshold for the celebratory popup
 
 const DESCRIPTIONS = {
     A: "Closed fist, thumb upright alongside the index finger.",
@@ -93,7 +93,7 @@ async function init() {
         staticModel: stat?.model, staticLabels: stat?.labels,
         dynModel: dyn?.model, dynLabels: dyn?.labels,
     });
-    window.__debugRecognizer = app.recognizer; // DEBUG (privremeno)
+    window.__debugRecognizer = app.recognizer; // DEBUG (temporary)
     app.landmarker = await createLandmarker();
     document.getElementById("loading")?.remove();
     render();
@@ -187,7 +187,7 @@ function handleFrame(s) {
     else if (app.view === "show") handleShow(s, recognized);
 }
 
-let dynamicMissUntil = 0; // dok je u budućnosti, chip prikazuje poruku o neuspjelom J/Z pokušaju
+let dynamicMissUntil = 0; // while in the future, the chip shows a message about a failed J/Z attempt
 
 function updateHud(s) {
     const chip = document.getElementById("status-chip");
@@ -234,6 +234,7 @@ function flashSuccess(letter, duration = 650) {
 let advancing = false;
 
 function handleLearn(s, rec) {
+    if (endModalOpen()) return;              // the alphabet is finished, wait for the user
     const target = ALPHABET[app.learnIndex];
     if (rec && rec.letter === target && !advancing) {
         advancing = true;
@@ -243,21 +244,59 @@ function handleLearn(s, rec) {
         checkSurveyUnlock();
         setTimeout(() => {
             advancing = false;
-            if (app.learnIndex < ALPHABET.length - 1) app.learnIndex++;
-            render();
+            if (app.learnIndex < ALPHABET.length - 1) { app.learnIndex++; render(); }
+            else showEndOfAlphabet();
         }, 1100);
     }
 }
 
-/* ---- Survey notifikacija: napredak (75%) ---- */
+/* ---- End of the alphabet (after Z, signed or skipped) ---- */
+function endModalOpen() { return !!document.getElementById("end-modal"); }
+
+function showEndOfAlphabet() {
+    if (endModalOpen()) return;
+    const n = doneLetters.size;
+    const all = n === ALPHABET.length;
+    const modal = document.createElement("div");
+    modal.id = "end-modal";
+    modal.className = "modal-overlay open";
+    modal.innerHTML = `
+      <div class="modal-box survey-modal end-modal">
+        <button class="modal-close" onclick="app_closeEnd()" aria-label="Close">✕</button>
+        <span class="end-badge">A–Z</span>
+        <h3>You've reached the end of the alphabet</h3>
+        <p>${all
+            ? "All 26 letters signed correctly. That's the whole manual alphabet."
+            : `${n} of ${ALPHABET.length} letters signed correctly so far.`}
+           Run through it again, or go back to the letter map and pick the ones
+           you want to practise.</p>
+        <div class="survey-modal-actions">
+          <button class="btn" onclick="app_restartLearn()">Start again from A</button>
+          <button class="btn ghost" onclick="app_closeEnd(); go('home')">Letter map</button>
+        </div>
+      </div>`;
+    modal.addEventListener("click", (e) => { if (e.target === modal) app_closeEnd(); });
+    document.body.appendChild(modal);
+}
+window.app_closeEnd = () => document.getElementById("end-modal")?.remove();
+window.app_restartLearn = () => {
+    window.app_closeEnd();
+    app.learnIndex = 0;
+    render();
+};
+
+/* ---- Survey notification: progress (75%) ---- */
 function checkSurveyUnlock() {
     if (doneLetters.size < SURVEY_THRESHOLD) return;
     if (localStorage.getItem("asl-survey-notified")) return;
-    localStorage.setItem("asl-survey-notified", "1");
-    setTimeout(() => showSurveyModal({
-        title: `You've learned ${SURVEY_THRESHOLD}/${ALPHABET.length} letters`,
-        body: "You can now fill out a short survey about your experience.",
-    }), 1300);
+    setTimeout(() => {
+        if (endModalOpen()) return;          // don't stack on the end-of-alphabet screen
+        localStorage.setItem("asl-survey-notified", "1");
+        showSurveyModal({
+            title: `You've learned ${SURVEY_THRESHOLD}/${ALPHABET.length} letters`,
+            body: "You can now fill out a short survey about your experience.",
+        });
+    }, 1300);
 }
 
 function showSurveyModal({ title, body }) {
@@ -378,7 +417,7 @@ function render() {
         mountCamera();
         ensureCamera().catch(err => {
             root().insertAdjacentHTML("afterbegin",
-                `<div class="banner warn">Kamera nije dostupna: ${err.message}</div>`);
+                `<div class="banner warn">Camera not available: ${err.message}</div>`);
         });
     }
 }
@@ -474,12 +513,12 @@ function renderLearn() {
     root().innerHTML = `
     ${demoBanner()}
     <div class="toolbar">
-      <button class="btn ghost" onclick="go('home')">← Letter map</button>
+      <button class="btn ghost" onclick="go('home')">Letter map</button>
       <span class="crumb">Letter ${app.learnIndex + 1} / 26</span>
       <span class="spacer"></span>
       <button class="btn ghost" onclick="app_showAlphabet()">See whole alphabet</button>
       <button class="btn ghost" onclick="app_prevLetter()">Previous</button>
-      <button class="btn" onclick="app_skipLetter()">Skip →</button>
+      <button class="btn" onclick="app_skipLetter()">Skip</button>
     </div>
     <div class="split">
       <div class="ref-card ${dyn ? "ref-dyn" : ""}">
@@ -495,7 +534,7 @@ function renderLearn() {
 }
 window.app_skipLetter = () => {
     if (app.learnIndex < ALPHABET.length - 1) { app.learnIndex++; render(); }
-    else go("home");
+    else showEndOfAlphabet();
 };
 window.app_prevLetter = () => {
     if (app.learnIndex > 0) { app.learnIndex--; render(); }
@@ -506,11 +545,11 @@ function renderWrite() {
     root().innerHTML = `
     ${demoBanner()}
     <div class="toolbar">
-      <button class="btn ghost" onclick="go('home')">← Back</button>
+      <button class="btn ghost" onclick="go('home')">Back</button>
       <span class="crumb">Free writing</span>
       <span class="spacer"></span>
       <button class="btn ghost" onclick="app_showAlphabet()">See whole alphabet</button>
-      <button class="btn ghost" onclick="app_backspace()">⌫ Delete letter</button>
+      <button class="btn ghost" onclick="app_backspace()">Delete letter</button>
       <button class="btn ghost" onclick="app_clear()">Clear all</button>
     </div>
     <div class="split">
@@ -531,7 +570,7 @@ function renderShow() {
     root().innerHTML = `
     ${demoBanner()}
     <div class="toolbar">
-      <button class="btn ghost" onclick="go('home')">← Back</button>
+      <button class="btn ghost" onclick="go('home')">Back</button>
       <span class="crumb">Show a sentence</span>
       <span class="spacer"></span>
       <button class="btn ghost" onclick="app_showAlphabet()">See whole alphabet</button>
@@ -565,7 +604,7 @@ function showAlphabetModal() {
       <div class="modal-box">
         <a class="modal-download" href="assets/signs/alphabet.png" download="asl-alphabet.png">Download</a>
         <button class="modal-close" onclick="app_closeAlphabet()" aria-label="Close">✕</button>
-        <img src="assets/signs/alphabet.png" alt="Cijela ASL abeceda" class="modal-img">
+        <img src="assets/signs/alphabet.png" alt="Full ASL alphabet" class="modal-img">
       </div>`;
         modal.addEventListener("click", (e) => { if (e.target === modal) closeAlphabetModal(); });
         document.body.appendChild(modal);

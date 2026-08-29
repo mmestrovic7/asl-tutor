@@ -1,23 +1,24 @@
 """
 collect_static.py
 -----------------
-Snimanje VLASTITIH uzoraka statičkih slova preko web kamere.
-Jako preporučeno uz Kaggle dataset: model treniran i na tvojoj kameri,
-tvom osvjetljenju i tvojoj ruci bit će osjetno točniji u aplikaciji.
-(U radu: "kombinacija javno dostupnog i vlastito prikupljenog skupa podataka")
+Recording YOUR OWN samples of static letters via webcam.
+Highly recommended alongside the Kaggle dataset: a model also trained on
+your camera, your lighting and your hand will be noticeably more accurate
+in the application.
+(In the thesis: "combination of a publicly available and a self-collected dataset")
 
-Upute:
+Instructions:
     python collect_static.py --out my_static.csv
-    - pokaži znak u kameru
-    - drži tipku slova (npr. 'a') - svaki frame dok držiš postaje jedan uzorak
-      (30 fps => ~150 uzoraka za 5 sekundi držanja)
-    - ESC za izlaz
+    - show the sign to the camera
+    - hold down the letter's key (e.g. 'a') - every frame while held becomes one sample
+      (30 fps => ~150 samples for 5 seconds of holding)
+    - ESC to exit
 
-Ako --out već postoji, novi uzorci se DODAJU na postojeće (ne briše ih),
-pa možeš pokretati skriptu više puta zaredom bez straha da ćeš izgubiti
-prijašnje snimke.
+If --out already exists, new samples are APPENDED to the existing ones (not deleted),
+so you can run the script multiple times in a row without fear of losing
+previous recordings.
 
-CSV format identičan extract_static.py, pa se datoteke mogu jednostavno spojiti:
+CSV format identical to extract_static.py, so the files can simply be merged:
     python -c "import pandas as pd; pd.concat([pd.read_csv('static_landmarks.csv'), pd.read_csv('my_static.csv')]).to_csv('combined.csv', index=False)"
 """
 
@@ -41,7 +42,7 @@ def main():
     args = ap.parse_args()
 
     hands = mp.solutions.hands.Hands(
-        static_image_mode=False,  # video mod - koristi tracking, brže i stabilnije
+        static_image_mode=False,  # video mode - uses tracking, faster and more stable
         max_num_hands=1,
         min_detection_confidence=0.6,
         min_tracking_confidence=0.6,
@@ -59,7 +60,7 @@ def main():
             for row in reader:
                 if row and row[0] in counts:
                     counts[row[0]] += 1
-        print(f"Nastavljam na postojećem {args.out}: {sum(counts.values())} uzoraka već snimljeno")
+        print(f"Continuing on existing {args.out}: {sum(counts.values())} samples already recorded")
 
     with open(args.out, "a", newline="") as f:
         writer = csv.writer(f)
@@ -70,7 +71,7 @@ def main():
             ok, frame = cap.read()
             if not ok:
                 break
-            frame = cv2.flip(frame, 1)  # zrcalo, prirodnije za korisnika
+            frame = cv2.flip(frame, 1)  # mirror, more natural for the user
             res = hands.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
             vec = None
@@ -89,11 +90,11 @@ def main():
                 counts[ch] += 1
 
             info = " ".join(f"{c}:{n}" for c, n in sorted(counts.items()) if n)
-            cv2.putText(frame, "Drzi tipku slova za snimanje | ESC izlaz", (10, 25),
+            cv2.putText(frame, "Hold a letter key to record | ESC to exit", (10, 25),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (30, 30, 30), 2)
             cv2.putText(frame, info[:90], (10, 55),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 100, 220), 1)
-            cv2.imshow("Prikupljanje statickih znakova", frame)
+            cv2.imshow("Collecting static signs", frame)
 
     cap.release()
     cv2.destroyAllWindows()

@@ -1,29 +1,29 @@
 """
 synthesize_other.py
 --------------------
-Generira SINTETICKE sekvence za klasu OSTALO (dinamicki model J/Z/OSTALO) iz
-vec postojecih statickih landmarkova (static_landmarks.csv), bez potrebe za
-dodatnim snimanjem kamerom.
+Generates SYNTHETIC sequences for the OTHER class (dynamic J/Z/OTHER model) from
+already existing static landmarks (static_landmarks.csv), without needing
+additional camera recording.
 
-Zasto ovo ima smisla: OSTALO treba pokriti "pokret ruke koji NIJE J ni Z" -
-najcesci takav pokret u stvarnoj upotrebi je PRIJELAZ ruke iz oblika jednog
-slova u oblik drugog slova (npr. iz A u B dok korisnik srice rijec). Takav
-prijelaz se moze aproksimirati linearnom interpolacijom izmedju dva stvarna,
-izmjerena staticka vektora - ista matematika kao resample_sequence() koja
-se ionako koristi za normalizaciju duljine pravih snimljenih gesti.
+Why this makes sense: OTHER needs to cover "hand movement that is NOT J or Z" -
+the most common such movement in real usage is the TRANSITION of the hand from
+the shape of one letter to the shape of another (e.g. from A to B while the user
+spells a word). Such a transition can be approximated by linear interpolation
+between two real, measured static vectors - the same math as resample_sequence()
+which is used anyway for normalizing the length of real recorded gestures.
 
-Generira dvije vrste sekvenci:
-  - "prijelaz" - dva RAZLICITA nasumicno odabrana slova, interpolacija
-    izmedju njihovih vektora kroz nasumican broj frameova + blagi sum
-  - "mirna_promjena" - jedno te isto slovo, ponovljeno uz izrazeniji sum -
-    simulira sitne korekcije/drhtanje ruke tijekom zadrzavanja pokreta
+Generates two kinds of sequences:
+  - "transition" - two DIFFERENT randomly chosen letters, interpolation
+    between their vectors over a random number of frames + slight noise
+  - "still_change" - the same letter repeated with more pronounced noise -
+    simulates small corrections/hand tremor while holding a pose
 
-NAPOMENA: Ovo NE zamjenjuje stvarno snimljene J/Z primjere niti barem
-tridesetak pravih OSTALO sekvenci snimljenih kamerom (idealno kombinirati
-oboje - vidi collect_dynamic.py) - ali brzo i besplatno popuni klasu do
-potrebne kolicine i raznolikosti bez ijednog dodatnog snimanja.
+NOTE: This does NOT replace actually recorded J/Z samples or at least
+thirty real OTHER sequences recorded with a camera (ideally combine
+both - see collect_dynamic.py) - but it quickly and cheaply fills the class
+to the required amount and diversity without any additional recording.
 
-Pokretanje:
+Usage:
     python synthesize_other.py --csv static_landmarks.csv --n 200 --out dynamic_data
 """
 
@@ -66,10 +66,10 @@ def make_hold_jitter(by_letter, rng, min_len=10, max_len=30, sigma=0.02):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--csv", action="append", required=True, help="static_landmarks CSV (moze vise puta)")
-    ap.add_argument("--n", type=int, default=200, help="Broj OSTALO sekvenci za generiranje")
+    ap.add_argument("--csv", action="append", required=True, help="static_landmarks CSV (can be given multiple times)")
+    ap.add_argument("--n", type=int, default=200, help="Number of OTHER sequences to generate")
     ap.add_argument("--hold-ratio", type=float, default=0.25,
-                     help="Udio 'mirna_promjena' sekvenci (ostatak su prijelazi)")
+                     help="Fraction of 'still_change' sequences (the rest are transitions)")
     ap.add_argument("--out", default="dynamic_data")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
@@ -91,8 +91,8 @@ def main():
         idx = start_idx + i
         np.save(os.path.join(out_dir, f"OTHER_synth_{idx:04d}.npy"), seq)
 
-    print(f"Generirano {len(kinds)} sintetickih OSTALO sekvenci "
-          f"({n_trans} prijelaza, {n_hold} mirnih) u {out_dir}")
+    print(f"Generated {len(kinds)} synthetic OTHER sequences "
+          f"({n_trans} transitions, {n_hold} still) in {out_dir}")
 
 
 if __name__ == "__main__":

@@ -1,20 +1,20 @@
 /**
  * landmarker.js
- * Kamera + MediaPipe HandLandmarker (WebAssembly, radi lokalno u browseru).
- * Crta kostur šake na canvas preko videa.
+ * Camera + MediaPipe HandLandmarker (WebAssembly, runs locally in the browser).
+ * Draws the hand skeleton on a canvas over the video.
  */
 
 import { FilesetResolver, HandLandmarker } from
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 
-/** Parovi točaka koje tvore kostur šake (standardna MediaPipe topologija). */
+/** Point pairs that form the hand skeleton (standard MediaPipe topology). */
 export const HAND_CONNECTIONS = [
-  [0,1],[1,2],[2,3],[3,4],        // palac
-  [0,5],[5,6],[6,7],[7,8],        // kažiprst
-  [5,9],[9,10],[10,11],[11,12],   // srednji
-  [9,13],[13,14],[14,15],[15,16], // prstenjak
-  [13,17],[17,18],[18,19],[19,20],// mali
-  [0,17]                          // rub dlana
+  [0,1],[1,2],[2,3],[3,4],        // thumb
+  [0,5],[5,6],[6,7],[7,8],        // index finger
+  [5,9],[9,10],[10,11],[11,12],   // middle finger
+  [9,13],[13,14],[14,15],[15,16], // ring finger
+  [13,17],[17,18],[18,19],[19,20],// pinky
+  [0,17]                          // palm edge
 ];
 
 export async function createLandmarker() {
@@ -45,8 +45,8 @@ export async function startCamera(videoEl) {
   return stream;
 }
 
-/** Crta kostur na canvas. Canvas je CSS-zrcaljen isto kao video,
- *  pa se koordinate crtaju bez dodatnog okretanja. */
+/** Draws the skeleton on a canvas. The canvas is CSS-mirrored just like the video,
+ *  so coordinates are drawn without additional flipping. */
 export function drawSkeleton(ctx, landmarks, w, h, color = "#1D6FE8") {
   ctx.clearRect(0, 0, w, h);
   if (!landmarks) return;

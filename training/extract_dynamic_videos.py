@@ -1,29 +1,29 @@
 """
 extract_dynamic_videos.py
 --------------------------
-Pretvara dataset VIDEO isječaka dinamičkih slova (J, Z) u .npy sekvence
-kompatibilne s train_dynamic.py - analogno onome što extract_static.py radi
-za statička slova, samo za video umjesto slika.
+Converts a dataset of VIDEO clips of dynamic letters (J, Z) into .npy sequences
+compatible with train_dynamic.py - analogous to what extract_static.py does
+for static letters, just for video instead of images.
 
-Očekivana struktura dataseta (npr. Kaggle "ASL Sign Language Alphabet
-Videos [J, Z]" - reorganiziraj datoteke u ovu strukturu ako dataset dolazi
-drugačije posložen):
+Expected dataset structure (e.g. Kaggle "ASL Sign Language Alphabet
+Videos [J, Z]" - reorganize the files into this structure if the dataset comes
+laid out differently):
     dataset/
         J/  clip001.mp4, clip002.mp4, ...
         Z/  clip001.mp4, ...
 
-Svaki video tretiramo kao JEDNU gestu od početka do kraja klipa (bez
-detekcije pokreta - pretpostavka je da je klip već obrezan na samu gestu,
-što je uobičajeno za ovakve datasetove). Frameovi bez detektirane ruke se
-preskaču; klip s premalo detektiranih frameova se odbacuje.
+Each video is treated as ONE gesture from the start to the end of the clip (no
+motion detection - the assumption is that the clip is already trimmed to just
+the gesture, which is typical for datasets like this). Frames without a
+detected hand are skipped; a clip with too few detected frames is discarded.
 
-Pokretanje:
-    python extract_dynamic_videos.py --dataset putanja/do/dataseta --out dynamic_data
+Usage:
+    python extract_dynamic_videos.py --dataset path/to/dataset --out dynamic_data
 
-Sekvence se spremaju kao dynamic_data/<LABEL>/<LABEL>_kaggle_XXXX.npy -
-nastavlja brojanje od postojećih datoteka (isti konvencija kao
-collect_dynamic.py), pa se mogu bezbrižno spojiti s ručno snimljenim
-uzorcima. Nakon ovoga pokreni train_dynamic.py kao i inače.
+Sequences are saved as dynamic_data/<LABEL>/<LABEL>_kaggle_XXXX.npy -
+continuing the numbering from existing files (same convention as
+collect_dynamic.py), so they can be freely combined with manually recorded
+samples. After this, run train_dynamic.py as usual.
 """
 
 import argparse
@@ -37,7 +37,7 @@ import numpy as np
 from landmark_utils import normalize_landmarks
 
 LABELS = ["J", "Z"]
-MIN_FRAMES = 8   # ista granica kao MIN_FRAMES u collect_dynamic.py
+MIN_FRAMES = 8   # same threshold as MIN_FRAMES in collect_dynamic.py
 VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv", ".webm")
 
 
@@ -68,14 +68,14 @@ def extract_sequence(path, hands):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", required=True, help="Korijenski direktorij video dataseta")
+    ap.add_argument("--dataset", required=True, help="Root directory of the video dataset")
     ap.add_argument("--out", default="dynamic_data")
     ap.add_argument("--max-per-class", type=int, default=500,
-                    help="Maksimalan broj klipova po slovu (za brzinu)")
+                    help="Maximum number of clips per letter (for speed)")
     args = ap.parse_args()
 
     hands = mp.solutions.hands.Hands(
-        static_image_mode=False,   # video mod - koristi tracking između frameova
+        static_image_mode=False,   # video mode - uses tracking between frames
         max_num_hands=1,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
@@ -88,7 +88,7 @@ def main():
     for label in LABELS:
         folder = os.path.join(args.dataset, label)
         if not os.path.isdir(folder):
-            print(f"[!] Preskačem {label} - nema direktorija {folder}")
+            print(f"[!] Skipping {label} - directory {folder} not found")
             continue
 
         out_dir = os.path.join(args.out, label)
@@ -102,19 +102,19 @@ def main():
             seq, n_hand, n_total = extract_sequence(path, hands)
             total_clips += 1
             if seq is None:
-                print(f"  [!] {name}: preskočeno ({n_hand}/{n_total} frameova s rukom, < {MIN_FRAMES})")
+                print(f"  [!] {name}: skipped ({n_hand}/{n_total} frames with hand, < {MIN_FRAMES})")
                 continue
             idx = start_idx + found
             out_path = os.path.join(out_dir, f"{label}_kaggle_{idx:04d}.npy")
             np.save(out_path, seq)
             found += 1
             saved_clips += 1
-            print(f"  {name}: spremljeno ({n_hand}/{n_total} frameova)")
+            print(f"  {name}: saved ({n_hand}/{n_total} frames)")
 
-        print(f"{label}: {found}/{len(files)} klipova uspješno obrađeno")
+        print(f"{label}: {found}/{len(files)} clips successfully processed")
 
     hands.close()
-    print(f"\nUkupno: {saved_clips}/{total_clips} klipova spremljeno u {args.out}")
+    print(f"\nTotal: {saved_clips}/{total_clips} clips saved to {args.out}")
 
 
 if __name__ == "__main__":

@@ -1,18 +1,18 @@
 """
 train_dynamic.py
 ----------------
-Trenira GRU model za dinamičke znakove: J, Z i OTHER (sve ostalo).
+Trains a GRU model for dynamic signs: J, Z and OTHER (everything else).
 
-Ulaz:  sekvence iz collect_dynamic.py (dynamic_data/J/*.npy itd.)
+Input:  sequences from collect_dynamic.py (dynamic_data/J/*.npy etc.)
 Model: (30, 63) -> GRU(64) -> Dense(32) -> softmax(3)
-Izlaz: ../web/models/dynamic/ (TF.js format) + labels.json
+Output: ../web/models/dynamic/ (TF.js format) + labels.json
 
-Pokretanje:
+Usage:
     python train_dynamic.py --data dynamic_data
 
-Zašto GRU, a ne LSTM? GRU ima manje parametara, brže trenira, a na malim
-skupovima sekvenci tipično postiže jednake rezultate - dobar argument za rad
-(može se navesti i eksperimentalna usporedba: samo zamijeni GRU s LSTM slojem).
+Why GRU and not LSTM? GRU has fewer parameters, trains faster, and on small
+sequence datasets typically achieves the same results - a good argument for the
+thesis (an experimental comparison can also be included: just swap GRU for an LSTM layer).
 """
 
 import argparse
@@ -29,7 +29,7 @@ from tensorflow import keras
 
 from landmark_utils import resample_sequence, mirror_vector, FEATURE_DIM
 
-LABELS = ["J", "Z", "OTHER"]   # redoslijed = indeksi klasa (čita ga i web app)
+LABELS = ["J", "Z", "OTHER"]   # order = class indices (also read by the web app)
 SEQ_LEN = 30
 
 
@@ -38,7 +38,7 @@ def load_sequences(root):
     for i, lab in enumerate(LABELS):
         folder = os.path.join(root, lab)
         if not os.path.isdir(folder):
-            print(f"[!] Nema direktorija {folder}")
+            print(f"[!] Directory {folder} not found")
             continue
         for name in sorted(os.listdir(folder)):
             if not name.endswith(".npy"):
@@ -46,16 +46,16 @@ def load_sequences(root):
             seq = np.load(os.path.join(folder, name))       # (T, 63)
             X.append(resample_sequence(seq, SEQ_LEN))       # (30, 63)
             y.append(i)
-        print(f"{lab}: {sum(1 for v in y if v == i)} sekvenci")
+        print(f"{lab}: {sum(1 for v in y if v == i)} sequences")
     return np.stack(X).astype(np.float32), np.array(y, dtype=np.int64)
 
 
 def augment(X, y):
-    """Zrcalne kopije (obje ruke) + vremenski šum (blago ubrzanje/usporenje)."""
+    """Mirrored copies (both hands) + temporal noise (slight speed-up/slow-down)."""
     X_mir = np.stack([np.stack([mirror_vector(f) for f in seq]) for seq in X])
     out_X = [X, X_mir]
     out_y = [y, y]
-    # vremenska augmentacija: nasumično odreži 10-20% s početka ili kraja pa resampliraj
+    # temporal augmentation: randomly trim 10-20% from the start or end, then resample
     rng = np.random.default_rng(42)
     crops = []
     for seq in X:
@@ -72,10 +72,10 @@ def augment(X, y):
 def build_model():
     model = keras.Sequential([
         keras.layers.Input(shape=(SEQ_LEN, FEATURE_DIM)),
-        # reset_after=False: TF.js-ov GRU sloj ne podržava reset_after=True
-        # (Kerasov default od TF 2.x) - bez ovoga model.json učitavanje u
-        # browseru baci "GRUCell does not support reset_after parameter set
-        # to true" i dynModel tiho ostane null (tryLoadModel guta grešku).
+        # reset_after=False: TF.js's GRU layer does not support reset_after=True
+        # (Keras's default since TF 2.x) - without this, loading model.json in
+        # the browser throws "GRUCell does not support reset_after parameter set
+        # to true" and dynModel silently stays null (tryLoadModel swallows the error).
         keras.layers.GRU(64, return_sequences=False, reset_after=False),
         keras.layers.Dropout(0.3),
         keras.layers.Dense(32, activation="relu"),
@@ -98,7 +98,7 @@ def main():
     X_tr, X_te, y_tr, y_te = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42)
     X_tr, y_tr = augment(X_tr, y_tr)
-    print(f"Trening: {len(X_tr)}, test: {len(X_te)}")
+    print(f"Train: {len(X_tr)}, test: {len(X_te)}")
 
     model = build_model()
     model.summary()
@@ -109,7 +109,7 @@ def main():
 
     y_pred = np.argmax(model.predict(X_te, verbose=0), axis=1)
     print(classification_report(y_te, y_pred, target_names=LABELS))
-    print("Matrica konfuzije:\n", confusion_matrix(y_te, y_pred))
+    print("Confusion matrix:\n", confusion_matrix(y_te, y_pred))
 
     model.save("dynamic_model.h5")
     os.makedirs(args.tfjs_out, exist_ok=True)
@@ -118,7 +118,7 @@ def main():
                    check=True)
     with open(os.path.join(args.tfjs_out, "labels.json"), "w") as f:
         json.dump(LABELS, f)
-    print(f"TF.js model izvezen u {args.tfjs_out}")
+    print(f"TF.js model exported to {args.tfjs_out}")
 
 
 if __name__ == "__main__":

@@ -1,45 +1,48 @@
 /**
  * recognizer.js
- * Stroj stanja koji odlučuje kada raditi statičku, a kada dinamičku
- * klasifikaciju, i kada je znak "službeno" prepoznat.
+ * State machine that decides when to run static vs. dynamic
+ * classification, and when a sign is "officially" recognized.
  *
- * STILL  - ruka miruje, svaki frame ide u MLP (statička slova). Slovo se
- *          prihvaća kad je isto slovo predviđeno s pouzdanošću >= CONF_STATIC
- *          kroz STABLE_FRAMES uzastopnih frameova.
- * MOVING - energija pokreta prešla prag, frameovi se skupljaju u buffer.
- *          Kad se pokret smiri, buffer ide u GRU model (J / Z / OTHER).
+ * STILL  - the hand is still, every frame goes into the MLP (static letters).
+ *          A letter is accepted once the same letter is predicted with
+ *          confidence >= CONF_STATIC for STABLE_FRAMES consecutive frames.
+ * MOVING - motion energy crossed the threshold, frames are collected into
+ *          a buffer. Once the motion settles, the buffer goes into the
+ *          GRU model (J / Z / OTHER).
  */
 
 import { motionEnergy, resampleSequence, FEATURE_DIM } from "./normalize.js?v=12";
 
 const CONF_STATIC   = 0.80;
-const CONF_DYNAMIC  = 0.88; // 0.75 je davao previše lažnih pogodaka
-const STABLE_FRAMES = 15;   // ~0.5s pri 30fps
-const MOTION_HI     = 0.030; // ulazak u MOVING, energija oblika šake (EMA)
-const MOTION_LO     = 0.014; // izlazak iz MOVING
+const CONF_DYNAMIC  = 0.88; // 0.75 gave too many false positives
+const STABLE_FRAMES = 15;   // ~0.5s at 30fps
+const MOTION_HI     = 0.030; // entering MOVING, hand-shape energy (EMA)
+const MOTION_LO     = 0.014; // leaving MOVING
 
-// normalizeLandmarks() briše apsolutnu poziciju zapešća, ali J/Z se
-// definiraju baš tim kretanjem kroz prostor: energija oblika šake ostaje
-// prenisko kroz cijelu gestu da bi sama pokrenula MOVING. Zato pratimo i
-// sirovu (nenormaliziranu) poziciju zapešća kao drugi, neovisan okidač.
+// normalizeLandmarks() discards the absolute wrist position, but J/Z are
+// defined precisely by that movement through space: hand-shape energy stays
+// too low throughout the whole gesture to trigger MOVING by itself. So we
+// also track the raw (non-normalized) wrist position as a second, independent
+// trigger.
 const RAW_MOTION_HI = 0.010;
 const RAW_MOTION_LO = 0.004;
-const STILL_END     = 10;   // frameova mirovanja koji zatvaraju gestu
+const STILL_END     = 10;   // stillness frames that close out a gesture
 const MIN_SEQ       = 8;
 const MAX_SEQ       = 90;
-const PREROLL       = 5;    // zadnjih mirnih frameova ubačenih na početak geste
+const PREROLL       = 5;    // last still frames prepended to the start of a gesture
 
-// MediaPipe zna izgubiti ruku na trenutak usred brzog pokreta (motion blur,
-// ekstremni kut); bez tolerancije jedan promašeni frame briše cijeli buffer.
+// MediaPipe can lose the hand for a moment mid fast-motion (motion blur,
+// extreme angle); without tolerance, one missed frame would wipe the whole buffer.
 const DROPOUT_GRACE = 4;
 
-// Rep pokreta nakon prepoznatog J/Z zna odmah okinuti novi MOVING i
-// pogrešno se klasificirati kao još jedan J/Z. Cooldown to sprječava.
+// The tail of a motion after a recognized J/Z can immediately trigger a new
+// MOVING and get misclassified as another J/Z. The cooldown prevents that.
 const DYNAMIC_COOLDOWN_FRAMES = 20;
 
-// Prirodno drhtanje ruke (npr. neudobna poza kod P) zna na jedan frame
-// probiti prag pokreta. Tražimo nekoliko uzastopnih frameova preko praga
-// prije ulaska u MOVING, da trzaj ne prekine STILL brojanje.
+// Natural hand tremor (e.g. an uncomfortable pose for P) can briefly cross
+// the motion threshold for a single frame. We require several consecutive
+// frames over the threshold before entering MOVING, so a jitter doesn't
+// interrupt STILL counting.
 const MOTION_STREAK_REQUIRED = 3;
 
 export class Recognizer {
@@ -48,7 +51,7 @@ export class Recognizer {
     this.staticLabels = staticLabels || [];
     this.dynModel = dynModel;
     this.dynLabels = dynLabels || [];
-    this.dynamicCooldown = 0; // nije dio reset(), mora preživjeti kratkotrajne resete
+    this.dynamicCooldown = 0; // not part of reset(), must survive short-lived resets
     this.reset();
   }
 
@@ -68,9 +71,9 @@ export class Recognizer {
     this.cooldown = false;
   }
 
-  /** Poziva se svaki frame. vec = Float32Array ili null (nema ruke).
-   *  rawWrist = {x, y} sirova pozicija zapešća, samo za detekciju pokreta,
-   *  model i dalje prima isključivo normalizirani vec. */
+  /** Called every frame. vec = Float32Array or null (no hand).
+   *  rawWrist = {x, y} raw wrist position, used only for motion detection,
+   *  the model still receives only the normalized vec. */
   update(vec, rawWrist = null) {
     if (this.dynamicCooldown > 0) this.dynamicCooldown--;
     if (!vec) {
@@ -178,9 +181,9 @@ export class Recognizer {
     });
   }
 
-  /** Vraća null samo ako klasifikacija nije ni pokušana (nema modela ili
-   *  je sekvenca prekratka). Inače uvijek vraća `matched`, da pozivatelj
-   *  može razlikovati "prepoznato" od "pokušano, nije prepoznato". */
+  /** Returns null only if classification wasn't even attempted (no model or
+   *  the sequence is too short). Otherwise it always returns `matched`, so
+   *  the caller can distinguish "recognized" from "attempted, not recognized". */
   #classifyDynamic() {
     if (!this.dynModel || this.seq.length < MIN_SEQ) return null;
     const rs = resampleSequence(this.seq, 30);
@@ -198,9 +201,9 @@ export class Recognizer {
   }
 }
 
-/** Učitavanje TF.js modela, vraća null ako model (još) ne postoji.
- *  cache: "no-store" na svim fetchevima jer browser inače zna zadržati
- *  stari model.json/.bin nakon retreniranja. */
+/** Loads a TF.js model, returns null if the model doesn't exist (yet).
+ *  cache: "no-store" on all fetches because the browser would otherwise
+ *  keep the old model.json/.bin after retraining. */
 export async function tryLoadModel(baseUrl) {
   try {
     const model = await tf.loadLayersModel(`${baseUrl}/model.json`,
@@ -208,7 +211,7 @@ export async function tryLoadModel(baseUrl) {
     const labels = await (await fetch(`${baseUrl}/labels.json`, { cache: "no-store" })).json();
     return { model, labels };
   } catch (e) {
-    console.warn(`Neuspjelo učitavanje modela iz ${baseUrl}:`, e);
+    console.warn(`Failed to load model from ${baseUrl}:`, e);
     return null;
   }
 }

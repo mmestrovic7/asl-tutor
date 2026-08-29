@@ -1,12 +1,12 @@
 """
 landmark_utils.py
 ------------------
-Normalizacija MediaPipe landmarkova, dijeljena između treninga (ovdje) i
-inferencije u browseru (web/js/normalize.js). Obje implementacije moraju
-ostati matematički identične, inače model dobiva drugačiju distribuciju
-ulaza u produkciji nego na treningu.
+Normalization of MediaPipe landmarks, shared between training (here) and
+inference in the browser (web/js/normalize.js). Both implementations must
+remain mathematically identical, otherwise the model gets a different input
+distribution in production than during training.
 
-Landmark format: (21, 3) numpy array, MediaPipe koordinate u rasponu 0..1.
+Landmark format: (21, 3) numpy array, MediaPipe coordinates in range 0..1.
 """
 
 import numpy as np
@@ -19,20 +19,20 @@ MIDDLE_PIP = 10
 RING_MCP, RING_PIP = 13, 14
 PINKY_MCP = 17
 
-# Udaljenost palca od ovih zglobova razlikuje A/S/T i M/N (položaj palca).
+# Distance of the thumb from these joints distinguishes A/S/T and M/N (thumb position).
 THUMB_DIST_TARGETS = [INDEX_MCP, INDEX_PIP, MIDDLE_MCP, MIDDLE_PIP,
                       RING_MCP, RING_PIP, PINKY_MCP]
 BASE_DIM = 63
-# +2: (cos, sin) kuta nagiba šake prije rotacijskog ispravka. G/Q, H/U, K/P
-# razlikuju se samo rotacijom cijele šake, pa to ne smije biti izbrisano.
+# +2: (cos, sin) of the hand tilt angle before the rotation correction. G/Q, H/U, K/P
+# differ only by rotation of the whole hand, so this must not be discarded.
 FEATURE_DIM = BASE_DIM + len(THUMB_DIST_TARGETS) + 2  # 72
 
 
 def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
-    """Translacija (zapešće u ishodište) + rotacija u ravnini slike
-    (poravnava zapešće->srednji prst na (0,-1), radi rotacijske invarijantnosti)
-    + skaliranje (dijeljenje duljinom dlana) + udaljenosti palca + izvorni kut.
-    Vraća vektor od FEATURE_DIM (72) vrijednosti."""
+    """Translation (wrist to origin) + rotation in the image plane
+    (aligns wrist->middle finger to (0,-1), for rotation invariance)
+    + scaling (dividing by palm length) + thumb distances + original angle.
+    Returns a vector of FEATURE_DIM (72) values."""
     pts = landmarks.astype(np.float32).copy()
     pts -= pts[WRIST]
 
@@ -43,7 +43,7 @@ def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
         x, y = pts[:, 0].copy(), pts[:, 1].copy()
         pts[:, 0] = cos_a * x + sin_a * y
         pts[:, 1] = -sin_a * x + cos_a * y
-        # z se ne rotira, MediaPipeova dubina je preslaba za to
+        # z is not rotated, MediaPipe's depth is too weak for that
     else:
         cos_a, sin_a = 1.0, 0.0
 
@@ -60,8 +60,8 @@ def normalize_landmarks(landmarks: np.ndarray) -> np.ndarray:
 
 
 def mirror_vector(vec: np.ndarray) -> np.ndarray:
-    """Zrcali po x-osi za augmentaciju obje ruke. Udaljenosti palca su
-    invarijantne na zrcaljenje. Sin komponenta kuta mijenja predznak, cos ne."""
+    """Mirrors along the x-axis for augmenting both hands. Thumb distances are
+    invariant to mirroring. The sin component of the angle flips sign, cos does not."""
     out = vec.copy()
     out[0:BASE_DIM:3] *= -1.0
     if out.shape[0] >= 2:
@@ -70,8 +70,8 @@ def mirror_vector(vec: np.ndarray) -> np.ndarray:
 
 
 def resample_sequence(seq: np.ndarray, target_len: int = 30) -> np.ndarray:
-    """Linearna interpolacija sekvence na fiksnu duljinu (GRU treba fiksan
-    broj frameova). Identična funkcija u web/js/normalize.js."""
+    """Linear interpolation of a sequence to a fixed length (GRU needs a fixed
+    number of frames). Identical function in web/js/normalize.js."""
     seq = np.asarray(seq, dtype=np.float32)
     T = seq.shape[0]
     if T == target_len:
@@ -86,5 +86,5 @@ def resample_sequence(seq: np.ndarray, target_len: int = 30) -> np.ndarray:
 
 
 def jitter(vec63: np.ndarray, sigma: float = 0.01) -> np.ndarray:
-    """Gaussov šum, simulira drhtanje ruke / šum detekcije."""
+    """Gaussian noise, simulates hand tremor / detection noise."""
     return vec63 + np.random.normal(0.0, sigma, vec63.shape).astype(np.float32)
